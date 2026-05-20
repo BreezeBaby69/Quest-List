@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Quest List">
+<title>⚔️ Quest List</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;--panel:#12121e;--panel2:#1a1a2e;--border:#2a2a4a;
+  --yellow:#f5c518;--red:#e84560;--green:#00e676;--cyan:#00cfcf;
+  --purple:#b44fde;--orange:#ff8c00;--white:#e8e8f0;--gray:#555570;
+  --orin:#e84560;--wife:#b44fde;--gold:#f5c518;
+  --scene-bg:linear-gradient(180deg,#0a0a0f 0%,#12121e 100%);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);font-family:'Press Start 2P',monospace;color:var(--white);display:flex;flex-direction:column;position:relative}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.1) 3px,rgba(0,0,0,0.1) 4px);pointer-events:none;z-index:9999}
+
+/* HEADER */
+.hdr{background:var(--panel2);border-bottom:3px solid var(--yellow);padding:9px 12px 7px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.hdr-title{font-size:9px;color:var(--yellow);text-shadow:2px 2px 0 #7a6000;flex:1;text-align:center}
+.hdr-btn{background:none;border:2px solid var(--gray);color:var(--gray);font-family:'Press Start 2P',monospace;font-size:6px;padding:5px 7px;cursor:pointer;transition:all .1s}
+.hdr-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.hdr-btn:active{transform:scale(.95)}
+
+/* XP PANEL */
+.xp-panel{background:var(--panel);border-bottom:2px solid var(--border);padding:7px 12px;display:flex;gap:10px;flex-shrink:0}
+.xp-player{flex:1}
+.xp-label{font-family:'VT323',monospace;font-size:13px;display:flex;justify-content:space-between;margin-bottom:3px}
+.xp-bar-bg{background:#111;border:2px solid #333;height:7px}
+.xp-bar-fill{height:100%;transition:width .5s steps(8)}
+.xp-bar-fill::after{content:'';display:block;height:2px;background:rgba(255,255,255,.2)}
+.coins-row{font-family:'VT323',monospace;font-size:12px;color:var(--gold);margin-top:2px}
+
+/* NAV */
+.nav{display:flex;border-bottom:3px solid var(--yellow);background:var(--bg);flex-shrink:0}
+.nav-btn{flex:1;padding:8px 2px 6px;font-family:'Press Start 2P',monospace;font-size:5px;border:none;background:var(--bg);color:var(--gray);cursor:pointer;border-right:2px solid #1a1a1a;transition:all .1s;line-height:1.8;text-align:center}
+.nav-btn:last-child{border-right:none}
+.nav-btn .ni{font-size:13px;display:block;margin-bottom:1px}
+.nav-btn.active{background:var(--panel2);color:var(--yellow);border-bottom:3px solid var(--yellow);margin-bottom:-3px}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.screen{display:none;padding:12px;animation:fadein .15s steps(3)}
+.screen.active{display:block}
+@keyframes fadein{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+/* SECTION HEADER */
+.sec-hdr{font-size:7px;color:var(--cyan);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-hdr::after{content:'';flex:1;height:2px;background:var(--border)}
+
+/* DAY NAV */
+.day-nav{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.day-nav-btn{background:var(--panel2);border:2px solid var(--border);color:var(--white);font-family:'Press Start 2P',monospace;font-size:9px;padding:6px 12px;cursor:pointer;transition:all .1s;flex-shrink:0}
+.day-nav-btn:hover{border-color:var(--yellow);color:var(--yellow)}
+.day-nav-btn:active{transform:scale(.95)}
+.day-label{flex:1;text-align:center;font-family:'VT323',monospace;font-size:17px;color:var(--yellow)}
+
+/* FILTERS */
+.filter-row{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+.fil-btn{font-family:'VT323',monospace;font-size:14px;padding:4px 9px;border:2px solid var(--border);background:var(--panel);color:var(--gray);cursor:pointer}
+.fil-btn.active{border-color:var(--cyan);color:var(--cyan)}
+
+/* TASK ITEMS */
+.task-item{background:var(--panel);border:2px solid var(--border);border-left:5px solid var(--gray);margin-bottom:7px;display:flex;align-items:center;gap:8px;padding:9px 10px;position:relative;overflow:hidden;transition:all .3s}
+.task-item.orin-a{border-left-color:var(--orin)}
+.task-item.wife-a{border-left-color:var(--wife)}
+.task-item.both-a{border-left-color:var(--yellow)}
+.task-item.recurring{border-style:dashed}
+.task-item.fully-done{opacity:.35;border-left-color:#333!important}
+
+/* BOOM ANIMATION */
+.task-item.exploding{animation:explode .5s steps(4) forwards}
+@keyframes explode{
+  0%{transform:scale(1);filter:brightness(1)}
+  25%{transform:scale(1.05);filter:brightness(3) hue-rotate(0deg)}
+  50%{transform:scale(1.1) rotate(1deg);filter:brightness(5) hue-rotate(90deg)}
+  75%{transform:scale(.95);filter:brightness(2) hue-rotate(180deg)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+
+.chk-wrap{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.chk{width:22px;height:22px;border:2px solid #555;background:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .1s;flex-shrink:0}
+.chk:hover{border-color:var(--yellow)}
+.chk.checked{background:var(--green);border-color:var(--green);color:#000}
+.chk-lbl{font-family:'VT323',monospace;font-size:9px;text-align:center}
+.task-body{flex:1;min-width:0}
+.task-text{font-family:'VT323',monospace;font-size:17px;line-height:1.3;word-break:break-word}
+.task-meta{font-family:'VT323',monospace;font-size:11px;color:var(--gray);margin-top:3px;display:flex;flex-wrap:wrap;gap:5px}
+.task-xp{font-family:'VT323',monospace;font-size:13px;color:var(--gold);flex-shrink:0}
+.task-del{background:none;border:2px solid #333;color:#555;font-size:13px;cursor:pointer;padding:4px 6px;flex-shrink:0;transition:all .1s;font-family:'Press Start 2P',monospace;line-height:1}
+.task-del:hover{border-color:var(--red);color:var(--red);background:rgba(232,69,96,.1)}
+.task-del:active{transform:scale(.9)}
+
+.empty{text-align:center;padding:36px 10px;font-family:'VT323',monospace;font-size:19px;color:#444;line-height:2}
+.empty-icon{font-size:36px;display:block;margin-bottom:8px;animation:bob 1s steps(2) infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+/* ADD FORM */
+.add-form{background:var(--panel);border:2px solid var(--border);padding:12px;margin-bottom:12px}
+.add-form-title{font-size:7px;color:var(--yellow);margin-bottom:10px}
+.inp{width:100%;background:#0d0d18;border:2px solid #333;color:var(--white);font-family:'VT323',monospace;font-size:18px;padding:8px 10px;outline:none;transition:border-color .1s;margin-bottom:7px}
+.inp:focus{border-color:var(--yellow)}
+.inp::placeholder{color:#444}
+.row{display:flex;gap:5px;margin-bottom:7px;flex-wrap:wrap}
+.lbl{font-family:'VT323',monospace;font-size:13px;color:var(--gray);margin-bottom:3px}
+.assign-btn{flex:1;min-width:55px;font-family:'VT323',monospace;font-size:15px;padding:7px 4px;border:2px solid var(--border);background:#0d0d18;color:var(--gray);cursor:pointer;text-align:center;transition:all .1s}
+.assign-btn.sel-orin{border-color:var(--orin);color:var(--orin);background:rgba(232,69,96,.12)}
+.assign-btn.sel-wife{border-color:var(--wife);color:var(--wife);background:rgba(180,79,222,.12)}
+.assign-btn.sel-both{border-color:var(--yellow);color:var(--yellow);background:rgba(245,197,24,.12)}
+.mode-btn{flex:1;font-family:'VT323',monospace;font-size:13px;padding:6px 3px;border:2px solid var(--border);background:#0d0d18;color:var(--gray);cursor:pointer;text-align:center;transition:all .1s}
+.mode-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,207,207,.1)}
+.days-row{display:flex;gap:3px;margin-bottom:7px}
+.day-btn{flex:1;font-family:'VT323',monospace;font-size:12px;padding:6px 2px;border:2px solid var(--border);background:#0d0d18;color:var(--gray);cursor:pointer;text-align:center}
+.day-btn.sel{border-color:var(--green);color:var(--green);background:rgba(0,230,118,.1)}
+.date-inp{width:100%;background:#0d0d18;border:2px solid #333;color:var(--white);font-family:'VT323',monospace;font-size:16px;padding:7px 9px;outline:none;color-scheme:dark;margin-bottom:7px}
+.submit-btn{width:100%;background:var(--green);color:#000;font-family:'Press Start 2P',monospace;font-size:8px;border:none;padding:11px;cursor:pointer;border-bottom:4px solid #007a3d;border-right:4px solid #007a3d;transition:all .05s}
+.submit-btn:active{transform:translate(2px,2px);border-bottom-width:2px;border-right-width:2px}
+
+/* CALENDAR */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-nav-btn{background:none;border:2px solid var(--border);color:var(--white);font-family:'Press Start 2P',monospace;font-size:7px;padding:5px 9px;cursor:pointer;transition:all .1s}
+.cal-nav-btn:hover{border-color:var(--yellow);color:var(--yellow)}
+.cal-month{font-size:8px;color:var(--yellow)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px}
+.cal-dow{font-family:'VT323',monospace;font-size:12px;color:var(--gray);text-align:center;padding:3px 0}
+.cal-day{aspect-ratio:1;background:var(--panel);border:2px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .1s;position:relative;font-family:'VT323',monospace;font-size:14px}
+.cal-day:hover{border-color:var(--cyan)}
+.cal-day.today{border-color:var(--yellow);color:var(--yellow)}
+.cal-day.selected{background:var(--yellow);color:#000}
+.cal-day.has-tasks::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:5px;height:5px;background:var(--cyan)}
+.cal-day.empty-day{opacity:.25;cursor:default}
+.cal-detail-hdr{font-size:7px;color:var(--cyan);margin-bottom:9px;display:none}
+
+/* ===== HERO / SHOP SCREEN ===== */
+.hero-arena{
+  display:flex;gap:10px;margin-bottom:14px;
+  border:3px solid var(--border);
+  padding:14px 10px 10px;
+  position:relative;
+  min-height:180px;
+  background:var(--scene-bg);
+  transition:background .5s;
+  overflow:hidden;
+}
+.hero-arena::before{content:attr(data-scene-label);position:absolute;top:5px;left:8px;font-family:'VT323',monospace;font-size:12px;color:rgba(255,255,255,.3)}
+
+/* Ground line */
+.hero-arena::after{content:'';position:absolute;bottom:28px;left:0;right:0;height:3px;background:rgba(255,255,255,.08)}
+
+.hero-card{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1}
+.hero-stage{
+  width:72px;height:72px;
+  display:flex;align-items:flex-end;justify-content:center;
+  font-size:52px;
+  line-height:1;
+  position:relative;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.6));
+  animation:heroFloat 2s steps(2) infinite;
+}
+@keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.hero-name{font-size:6px;margin:6px 0 3px;text-align:center}
+.hero-name.orin{color:var(--orin)}
+.hero-name.wife{color:var(--wife)}
+.hero-title{font-family:'VT323',monospace;font-size:13px;color:var(--gray);text-align:center;min-height:16px}
+.hero-stats{font-family:'VT323',monospace;font-size:12px;margin-top:5px;text-align:center;color:#aaa;line-height:1.7}
+.hero-coins-badge{font-family:'VT323',monospace;font-size:14px;color:var(--gold);margin-top:3px}
+
+/* divider */
+.hero-vs{display:flex;align-items:center;justify-content:center;font-size:10px;color:#333;flex-direction:column;gap:4px;padding:0 4px;z-index:1}
+.hero-vs span{color:var(--yellow);font-size:7px}
+
+/* SHOP */
+.shop-tabs{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;padding-bottom:3px}
+.shop-tab{font-family:'VT323',monospace;font-size:14px;padding:5px 10px;border:2px solid var(--border);background:var(--panel);color:var(--gray);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.shop-tab.active{border-color:var(--yellow);color:var(--yellow);background:var(--panel2)}
+.shop-grid{display:flex;flex-direction:column;gap:7px}
+.shop-item{background:var(--panel);border:2px solid var(--border);padding:10px;display:flex;align-items:center;gap:10px;transition:border-color .15s}
+.shop-item:hover{border-color:#3a3a5a}
+.shop-item.locked{opacity:.4}
+.shop-icon-big{font-size:30px;flex-shrink:0;width:40px;text-align:center}
+.shop-body{flex:1;min-width:0}
+.shop-iname{font-family:'VT323',monospace;font-size:17px;line-height:1.2}
+.shop-idesc{font-family:'VT323',monospace;font-size:12px;color:var(--gray);margin-top:2px}
+.shop-itag{font-family:'VT323',monospace;font-size:11px;margin-top:2px}
+.shop-right{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
+.shop-cost{font-family:'VT323',monospace;font-size:15px;color:var(--gold)}
+.shop-btn{background:var(--panel2);border:2px solid var(--gold);color:var(--gold);font-family:'Press Start 2P',monospace;font-size:5px;padding:5px 7px;cursor:pointer;transition:all .1s;white-space:nowrap}
+.shop-btn:hover:not(:disabled){background:var(--gold);color:#000}
+.shop-btn:disabled{border-color:#333;color:#444;cursor:default;background:var(--panel)}
+.owned-lbl{font-family:'VT323',monospace;font-size:13px;color:var(--green)}
+.locked-lbl{font-family:'VT323',monospace;font-size:11px;color:#444}
+.equipped-lbl{font-family:'VT323',monospace;font-size:11px;color:var(--cyan)}
+
+/* MODALS */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:10000;display:none;align-items:center;justify-content:center;padding:14px}
+.modal-ov.show{display:flex}
+.modal{background:var(--panel2);border:3px solid var(--yellow);padding:22px 18px;max-width:310px;width:100%;text-align:center;box-shadow:6px 6px 0 #000,0 0 40px rgba(245,197,24,.25);animation:popIn .2s steps(3)}
+@keyframes popIn{from{transform:scale(.4) rotate(-3deg)}to{transform:scale(1) rotate(0deg)}}
+.modal h2{font-size:8px;color:var(--yellow);margin-bottom:10px}
+.modal .big{font-size:26px;margin:8px 0}
+.modal p{font-family:'VT323',monospace;font-size:17px;color:var(--cyan);margin-bottom:14px}
+.modal-close{background:var(--yellow);color:#000;border:none;font-family:'Press Start 2P',monospace;font-size:7px;padding:10px 18px;cursor:pointer;border-bottom:3px solid #7a6000;border-right:3px solid #7a6000}
+.modal-close:active{transform:translate(2px,2px);border-bottom-width:1px;border-right-width:1px}
+
+/* CONFIRM MODAL */
+.confirm-modal{background:var(--panel2);border:3px solid var(--red);padding:22px 18px;max-width:300px;width:100%;text-align:center;box-shadow:6px 6px 0 #000;animation:popIn .2s steps(3)}
+.confirm-modal h2{font-size:7px;color:var(--red);margin-bottom:10px}
+.confirm-modal p{font-family:'VT323',monospace;font-size:16px;color:var(--white);margin-bottom:16px}
+.confirm-row{display:flex;gap:8px;justify-content:center}
+.confirm-yes{background:var(--red);color:#fff;border:none;font-family:'Press Start 2P',monospace;font-size:6px;padding:9px 16px;cursor:pointer;border-bottom:3px solid #7a0000;border-right:3px solid #7a0000}
+.confirm-no{background:var(--panel);color:var(--gray);border:2px solid var(--gray);font-family:'Press Start 2P',monospace;font-size:6px;padding:9px 16px;cursor:pointer}
+
+/* EXPLOSION PARTICLES */
+.particle{position:fixed;pointer-events:none;z-index:9998;font-size:16px;animation:fly var(--dur) forwards}
+@keyframes fly{
+  0%{transform:translate(0,0) scale(1) rotate(0deg);opacity:1}
+  100%{transform:translate(var(--tx),var(--ty)) scale(0) rotate(var(--rot));opacity:0}
+}
+.star-flash{position:fixed;inset:0;pointer-events:none;z-index:9990;animation:flash .4s steps(3) forwards}
+@keyframes flash{0%{background:rgba(255,255,100,.15)}50%{background:rgba(255,255,100,.3)}100%{background:transparent}}
+
+/* XP POPUP */
+.xp-pop{position:fixed;font-family:'Press Start 2P',monospace;font-size:9px;color:var(--yellow);text-shadow:2px 2px 0 #7a6000;pointer-events:none;z-index:9998;animation:xppop 1.3s forwards}
+@keyframes xppop{0%{transform:translateY(0) scale(.5);opacity:1}60%{transform:translateY(-55px) scale(1.3);opacity:1}100%{transform:translateY(-90px) scale(1);opacity:0}}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:#111}
+::-webkit-scrollbar-thumb{background:#333}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <button class="hdr-btn" onclick="undo()">↩ UNDO</button>
+  <div class="hdr-title">⚔️ QUEST LIST ⚔️</div>
+  <div style="width:56px"></div>
+</header>
+
+<!-- XP PANEL -->
+<div class="xp-panel">
+  <div class="xp-player">
+    <div class="xp-label">
+      <span style="color:var(--orin)">🗡️ ORIN</span>
+      <span id="orin-xp-lbl" style="color:#aaa">LVL 1</span>
+    </div>
+    <div class="xp-bar-bg"><div class="xp-bar-fill" id="orin-bar" style="background:var(--orin);width:0%"></div></div>
+    <div class="coins-row">🪙 <span id="orin-coins-top">0</span></div>
+  </div>
+  <div class="xp-player">
+    <div class="xp-label">
+      <span style="color:var(--wife)">🔮 WIFE</span>
+      <span id="wife-xp-lbl" style="color:#aaa">LVL 1</span>
+    </div>
+    <div class="xp-bar-bg"><div class="xp-bar-fill" id="wife-bar" style="background:var(--wife);width:0%"></div></div>
+    <div class="coins-row">🪙 <span id="wife-coins-top">0</span></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showScreen('quests')" data-sc="quests"><span class="ni">📋</span>QUESTS</button>
+  <button class="nav-btn" onclick="showScreen('add')" data-sc="add"><span class="ni">➕</span>ADD</button>
+  <button class="nav-btn" onclick="showScreen('calendar')" data-sc="calendar"><span class="ni">📅</span>CAL</button>
+  <button class="nav-btn" onclick="showScreen('hero')" data-sc="hero"><span class="ni">🧙</span>HEROES</button>
+</nav>
+
+<div class="main">
+
+<!-- ===== QUESTS ===== -->
+<div id="sc-quests" class="screen active">
+  <div class="day-nav">
+    <button class="day-nav-btn" onclick="shiftDay(-1)">◀</button>
+    <div class="day-label" id="day-label-q">--</div>
+    <button class="day-nav-btn" onclick="shiftDay(1)">▶</button>
+  </div>
+  <div class="filter-row">
+    <button class="fil-btn active" onclick="setQFilter('all',this)">ALL</button>
+    <button class="fil-btn" onclick="setQFilter('orin',this)">🗡️</button>
+    <button class="fil-btn" onclick="setQFilter('wife',this)">🔮</button>
+    <button class="fil-btn" onclick="setQFilter('active',this)">ACTIVE</button>
+    <button class="fil-btn" onclick="setQFilter('done',this)">DONE</button>
+  </div>
+  <ul id="quest-list" style="list-style:none"></ul>
+</div>
+
+<!-- ===== ADD ===== -->
+<div id="sc-add" class="screen">
+  <div class="sec-hdr">NEW QUEST</div>
+  <div class="add-form">
+    <div class="add-form-title">⚔️ QUEST DETAILS</div>
+    <div class="lbl">TASK NAME</div>
+    <input class="inp" id="inp-name" type="text" placeholder="Enter quest name..." maxlength="80" onkeydown="if(event.key==='Enter')addTask()">
+    <div class="lbl">ASSIGN TO</div>
+    <div class="row" id="assign-row">
+      <button class="assign-btn sel-orin" onclick="setAssign('orin',this)">🗡️ ORIN</button>
+      <button class="assign-btn" onclick="setAssign('wife',this)">🔮 WIFE</button>
+      <button class="assign-btn" onclick="setAssign('both',this)">🤝 BOTH</button>
+    </div>
+    <div class="lbl">SCHEDULE</div>
+    <div class="row">
+      <button class="mode-btn active" onclick="setMode('anytime',this)">♾️ DAILY</button>
+      <button class="mode-btn" onclick="setMode('date',this)">📅 DATE</button>
+      <button class="mode-btn" onclick="setMode('recurring',this)">🔁 REPEAT</button>
+    </div>
+    <div id="date-section" style="display:none">
+      <div class="lbl">DUE DATE</div>
+      <input class="date-inp" id="inp-date" type="date">
+    </div>
+    <div id="recur-section" style="display:none">
+      <div class="lbl">REPEAT ON</div>
+      <div class="days-row">
+        <button class="day-btn" onclick="toggleDay(0,this)">S</button>
+        <button class="day-btn" onclick="toggleDay(1,this)">M</button>
+        <button class="day-btn" onclick="toggleDay(2,this)">T</button>
+        <button class="day-btn" onclick="toggleDay(3,this)">W</button>
+        <button class="day-btn" onclick="toggleDay(4,this)">T</button>
+        <button class="day-btn" onclick="toggleDay(5,this)">F</button>
+        <button class="day-btn" onclick="toggleDay(6,this)">S</button>
+      </div>
+    </div>
+    <button class="submit-btn" onclick="addTask()">⚔️ ADD QUEST</button>
+  </div>
+</div>
+
+<!-- ===== CALENDAR ===== -->
+<div id="sc-calendar" class="screen">
+  <div class="sec-hdr">CALENDAR</div>
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="calMove(-1)">◀ PREV</button>
+    <div class="cal-month" id="cal-month-lbl"></div>
+    <button class="cal-nav-btn" onclick="calMove(1)">NEXT ▶</button>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div class="cal-detail-hdr" id="cal-detail-hdr"></div>
+  <ul id="cal-task-list" style="list-style:none"></ul>
+</div>
+
+<!-- ===== HERO ===== -->
+<div id="sc-hero" class="screen">
+  <div class="sec-hdr">HEROES</div>
+
+  <!-- Arena -->
+  <div class="hero-arena" id="hero-arena" data-scene-label="HOMETOWN PLAINS">
+    <div class="hero-card">
+      <div class="hero-stage" id="orin-stage">🩲</div>
+      <div class="hero-name orin">ORIN</div>
+      <div class="hero-title" id="orin-title">LEVEL 1 PEASANT</div>
+      <div class="hero-stats" id="orin-hstats">ATK:1 DEF:0 SPD:1</div>
+      <div class="hero-coins-badge">🪙 <span id="orin-coins-hero">0</span></div>
+    </div>
+    <div class="hero-vs">
+      <span style="font-size:16px">⚔️</span>
+      <span>VS</span>
+      <span style="font-size:16px">🔮</span>
+    </div>
+    <div class="hero-card">
+      <div class="hero-stage" id="wife-stage">👙</div>
+      <div class="hero-name wife">WIFE</div>
+      <div class="hero-title" id="wife-title">LEVEL 1 PEASANT</div>
+      <div class="hero-stats" id="wife-hstats">ATK:1 DEF:0 SPD:1</div>
+      <div class="hero-coins-badge">🪙 <span id="wife-coins-hero">0</span></div>
+    </div>
+  </div>
+
+  <!-- Shop Tabs -->
+  <div class="shop-tabs" id="shop-tabs">
+    <button class="shop-tab active" onclick="setShopTab('orin-weapons',this)">🗡️ ORIN WEAPONS</button>
+    <button class="shop-tab" onclick="setShopTab('orin-armor',this)">🛡️ ORIN ARMOR</button>
+    <button class="shop-tab" onclick="setShopTab('orin-class',this)">⚡ ORIN CLASS</button>
+    <button class="shop-tab" onclick="setShopTab('wife-weapons',this)">🪄 WIFE WEAPONS</button>
+    <button class="shop-tab" onclick="setShopTab('wife-armor',this)">✨ WIFE ARMOR</button>
+    <button class="shop-tab" onclick="setShopTab('wife-class',this)">🌟 WIFE CLASS</button>
+    <button class="shop-tab" onclick="setShopTab('backgrounds',this)">🏞️ SCENES</button>
+    <button class="shop-tab" onclick="setShopTab('perks',this)">💎 PERKS</button>
+  </div>
+  <div class="shop-grid" id="shop-grid"></div>
+</div>
+
+</div><!-- /main -->
+
+<!-- LEVEL UP MODAL -->
+<div class="modal-ov" id="lvl-modal" onclick="closeLvlModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div style="font-size:22px;margin-bottom:5px;animation:bob 1s steps(2) infinite">⭐⭐⭐</div>
+    <h2>★ LEVEL UP! ★</h2>
+    <div class="big" id="lvl-num">2</div>
+    <p id="lvl-txt">You reached level 2!</p>
+    <div style="font-family:'VT323',monospace;font-size:16px;color:var(--gold);margin-bottom:14px" id="lvl-coins"></div>
+    <button class="modal-close" onclick="closeLvlModal()">AWESOME! 🎉</button>
+  </div>
+</div>
+
+<!-- TOAST MODAL -->
+<div class="modal-ov" id="toast-modal" onclick="closeToast()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="big" id="toast-icon">✓</div>
+    <h2 id="toast-title">DONE</h2>
+    <p id="toast-msg"></p>
+    <button class="modal-close" onclick="closeToast()">OK!</button>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal-ov" id="confirm-modal">
+  <div class="confirm-modal">
+    <h2>⚠️ DELETE QUEST?</h2>
+    <p id="confirm-name">This quest will be lost forever!</p>
+    <div class="confirm-row">
+      <button class="confirm-yes" id="confirm-yes-btn">YES, DELETE</button>
+      <button class="confirm-no" onclick="closeConfirm()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// DATA & CONFIG
+// =============================================
+const XP_PER_TASK = 20;
+const XP_LEVELS   = [0,80,200,380,620,920,1300,1770,2340,3020,4000,5200,6600,8200,10000];
+const COINS_PER_LVL = 5;
+const DAYS_SHORT  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS      = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS_ABR    = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+
+// Title progression (by level ranges)
+const ORIN_TITLES  = ['PEASANT','SQUIRE','FIGHTER','KNIGHT','CHAMPION','WARLORD','LEGEND','OVERLORD','DEMIGOD','TITAN','DEITY','ETERNAL'];
+const WIFE_TITLES  = ['PEASANT','APPRENTICE','MAGE','SORCERESS','ENCHANTRESS','ARCHMAGE','ORACLE','MYSTIC','SAGE','PROPHET','DIVINER','GODDESS'];
+
+// ---- SHOP CATALOGUE ----
+const SHOP_CATALOGUE = {
+  'orin-weapons': [
+    {id:'o_w1', name:'WOODEN STICK',   icon:'🪵', desc:'Better than bare hands... barely.',  cost:3,  stat:'ATK+1', atk:1,def:0,spd:0, sprite:'🩲', spriteWith:'🩲', overlay:'🪵'},
+    {id:'o_w2', name:'IRON SWORD',     icon:'🗡️', desc:'A proper blade for a proper hero.',   cost:8,  stat:'ATK+3', atk:3,def:0,spd:0, req:'o_w1'},
+    {id:'o_w3', name:'BATTLE AXE',     icon:'🪓', desc:'Cleave through any obstacle.',         cost:15, stat:'ATK+5', atk:5,def:0,spd:-1,req:'o_w2'},
+    {id:'o_w4', name:'ENCHANTED BOW',  icon:'🏹', desc:'Strike enemies from afar.',            cost:22, stat:'ATK+4 SPD+2', atk:4,def:0,spd:2, req:'o_w3'},
+    {id:'o_w5', name:'DRAGON SLAYER',  icon:'⚔️', desc:'Forged in dragonfire. Pure legend.',  cost:40, stat:'ATK+10', atk:10,def:0,spd:0,req:'o_w4'},
+    {id:'o_w6', name:'EXCALIBUR',      icon:'🌟', desc:'THE legendary sword. Max power.',      cost:75, stat:'ATK+15 SPD+3', atk:15,def:0,spd:3,req:'o_w5'},
+  ],
+  'orin-armor': [
+    {id:'o_a1', name:'LEAF TUNIC',     icon:'🍃', desc:'At least you\'re not naked anymore.',  cost:4,  stat:'DEF+1', atk:0,def:1,spd:0},
+    {id:'o_a2', name:'LEATHER ARMOR',  icon:'🥋', desc:'Tanned hide, solid protection.',       cost:10, stat:'DEF+3', atk:0,def:3,spd:0, req:'o_a1'},
+    {id:'o_a3', name:'CHAIN MAIL',     icon:'🔗', desc:'Rings of steel, woven strong.',        cost:18, stat:'DEF+5', atk:0,def:5,spd:-1,req:'o_a2'},
+    {id:'o_a4', name:'KNIGHT PLATE',   icon:'🛡️', desc:'Heavy armour, nearly impenetrable.',   cost:30, stat:'DEF+8', atk:0,def:8,spd:-2,req:'o_a3'},
+    {id:'o_a5', name:'DRAGON SCALE',   icon:'🐉', desc:'Scales of an ancient dragon.',         cost:55, stat:'DEF+12 ATK+2', atk:2,def:12,spd:0,req:'o_a4'},
+  ],
+  'orin-class': [
+    {id:'o_c1', name:'SQUIRE UPGRADE',   icon:'🪖', desc:'Don the helmet, become a squire.',    cost:5,  stat:'ALL+1', atk:1,def:1,spd:1, sprite:'🧑', type:'class'},
+    {id:'o_c2', name:'WARRIOR CLASS',    icon:'💪', desc:'Body hardened, mind sharpened.',       cost:15, stat:'ATK+3 DEF+2', atk:3,def:2,spd:0, sprite:'🧔', type:'class', req:'o_c1'},
+    {id:'o_c3', name:'KNIGHT CLASS',     icon:'⚔️', desc:'Honour, duty, and a shiny horse.',    cost:30, stat:'ALL+4', atk:4,def:4,spd:2, sprite:'🤺', type:'class', req:'o_c2'},
+    {id:'o_c4', name:'PALADIN CLASS',    icon:'✝️', desc:'Holy warrior blessed by the gods.',   cost:55, stat:'ATK+6 DEF+6', atk:6,def:6,spd:0, sprite:'🛡️', type:'class', req:'o_c3'},
+    {id:'o_c5', name:'DARK LORD CLASS',  icon:'💀', desc:'Forsake the light. Embrace power.',   cost:80, stat:'ATK+15 DEF+5', atk:15,def:5,spd:5, sprite:'🦹‍♂️', type:'class', req:'o_c4'},
+  ],
+  'wife-weapons': [
+    {id:'w_w1', name:'TWIG WAND',      icon:'🌿', desc:'A twig with ambition.',                cost:3,  stat:'ATK+1', atk:1,def:0,spd:1},
+    {id:'w_w2', name:'CRYSTAL STAFF',  icon:'🔮', desc:'Channels raw magical energy.',         cost:9,  stat:'ATK+3 SPD+1', atk:3,def:0,spd:1, req:'w_w1'},
+    {id:'w_w3', name:'FIRE ORB',       icon:'🔥', desc:'Burns everything. Very effective.',     cost:16, stat:'ATK+5', atk:5,def:0,spd:0, req:'w_w2'},
+    {id:'w_w4', name:'LIGHTNING ROD',  icon:'⚡', desc:'Speed and power in one strike.',       cost:25, stat:'ATK+5 SPD+4', atk:5,def:0,spd:4, req:'w_w3'},
+    {id:'w_w5', name:'VOID SCEPTER',   icon:'🌑', desc:'Tears holes in reality itself.',       cost:45, stat:'ATK+12', atk:12,def:0,spd:2,req:'w_w4'},
+    {id:'w_w6', name:'COSMOS WAND',    icon:'🌌', desc:'Wields the power of entire galaxies.', cost:75, stat:'ATK+18 SPD+5', atk:18,def:0,spd:5,req:'w_w5'},
+  ],
+  'wife-armor': [
+    {id:'w_a1', name:'FAIRY ROBE',     icon:'🌸', desc:'Light as air, better than nothing.',   cost:4,  stat:'DEF+1 SPD+1', atk:0,def:1,spd:1},
+    {id:'w_a2', name:'SILK VESTMENT',  icon:'🧣', desc:'Woven from enchanted moonsilk.',       cost:10, stat:'DEF+3', atk:0,def:3,spd:0, req:'w_a1'},
+    {id:'w_a3', name:'MYSTIC CLOAK',   icon:'🌙', desc:'Shadows bend around the wearer.',      cost:20, stat:'DEF+5 SPD+2', atk:0,def:5,spd:2,req:'w_a2'},
+    {id:'w_a4', name:'ARCANE MAIL',    icon:'💫', desc:'Magic-woven armour, light and strong.',cost:32, stat:'DEF+7 ATK+2', atk:2,def:7,spd:0,req:'w_a3'},
+    {id:'w_a5', name:'CELESTIAL GOWN', icon:'🌟', desc:'Spun from starlight by the gods.',     cost:55, stat:'ALL+8', atk:5,def:8,spd:3,req:'w_a4'},
+  ],
+  'wife-class': [
+    {id:'w_c1', name:'APPRENTICE',     icon:'📚', desc:'Begin the path of magic.',             cost:5,  stat:'ALL+1', atk:1,def:1,spd:1, sprite:'👩', type:'class'},
+    {id:'w_c2', name:'MAGE CLASS',     icon:'🔮', desc:'Command fire, ice, and lightning.',    cost:15, stat:'ATK+3 SPD+2', atk:3,def:0,spd:2, sprite:'🧙‍♀️', type:'class', req:'w_c1'},
+    {id:'w_c3', name:'SORCERESS',      icon:'⭐', desc:'Ancient knowledge unlocked.',          cost:30, stat:'ATK+5 SPD+3', atk:5,def:2,spd:3, sprite:'🧝‍♀️', type:'class', req:'w_c2'},
+    {id:'w_c4', name:'HIGH WITCH',     icon:'🌙', desc:'True mastery over arcane forces.',    cost:55, stat:'ATK+8 DEF+5', atk:8,def:5,spd:2, sprite:'🧛‍♀️', type:'class', req:'w_c3'},
+    {id:'w_c5', name:'QUEEN OF MAGIC', icon:'👑', desc:'Absolute ruler of all magic.',        cost:80, stat:'ALL+12', atk:12,def:8,spd:8, sprite:'👸', type:'class', req:'w_c4'},
+  ],
+  'backgrounds': [
+    {id:'bg_plains',  name:'HOMETOWN PLAINS', icon:'🌿', desc:'Where every hero begins.',          cost:0,  bg:'linear-gradient(180deg,#0a1a0a 0%,#0d2a0d 60%,#0a1a0a 100%)', scene:'HOMETOWN PLAINS', isFree:true},
+    {id:'bg_castle',  name:'CASTLE GATES',    icon:'🏰', desc:'Stone walls, proud banners.',       cost:10, bg:'linear-gradient(180deg,#1a1020 0%,#2a1535 60%,#0d0d15 100%)', scene:'CASTLE GATES'},
+    {id:'bg_dungeon', name:'DARK DUNGEON',    icon:'🕯️', desc:'Torches flicker in the dark.',    cost:15, bg:'linear-gradient(180deg,#0d0d00 0%,#1a1500 60%,#0d0800 100%)', scene:'DARK DUNGEON'},
+    {id:'bg_volcano', name:'VOLCANO LAIR',    icon:'🌋', desc:'Lava flows. Very dramatic.',        cost:20, bg:'linear-gradient(180deg,#2a0500 0%,#3d0a00 60%,#1a0000 100%)', scene:'VOLCANO LAIR'},
+    {id:'bg_sky',     name:'SKY KINGDOM',     icon:'☁️', desc:'Battle above the clouds.',         cost:25, bg:'linear-gradient(180deg,#001a3a 0%,#002855 60%,#001020 100%)', scene:'SKY KINGDOM'},
+    {id:'bg_space',   name:'OUTER SPACE',     icon:'🌌', desc:'The final frontier of questing.',  cost:35, bg:'linear-gradient(180deg,#000005 0%,#050015 60%,#000000 100%)', scene:'OUTER SPACE'},
+    {id:'bg_heaven',  name:'DIVINE REALM',    icon:'✨', desc:'The gods themselves look on.',      cost:60, bg:'linear-gradient(180deg,#1a0030 0%,#2d0050 60%,#0d0020 100%)', scene:'DIVINE REALM'},
+  ],
+  'perks': [
+    {id:'p_xp1',  name:'XP BOOST I',      icon:'⬆️', desc:'Earn 25% more XP permanently.',      cost:20, type:'perk', effect:'xpBoost1'},
+    {id:'p_xp2',  name:'XP BOOST II',     icon:'⬆️', desc:'Earn 50% more XP permanently.',      cost:45, type:'perk', effect:'xpBoost2', req:'p_xp1'},
+    {id:'p_coin1',name:'COIN MAGNET I',   icon:'🧲', desc:'Earn +2 coins on every level up.',   cost:15, type:'perk', effect:'coinBoost1'},
+    {id:'p_coin2',name:'COIN MAGNET II',  icon:'🧲', desc:'Earn +5 coins on every level up.',   cost:35, type:'perk', effect:'coinBoost2', req:'p_coin1'},
+    {id:'p_boom', name:'MEGA EXPLOSION',  icon:'💥', desc:'Tasks explode with EXTRA drama.',     cost:10, type:'perk', effect:'megaBoom'},
+    {id:'p_rainbow',name:'RAINBOW MODE',  icon:'🌈', desc:'XP bars show rainbow colors.',       cost:25, type:'perk', effect:'rainbowMode'},
+    {id:'p_pets', name:'BATTLE PET 🐉',   icon:'🐲', desc:'A tiny dragon companion appears.',   cost:50, type:'perk', effect:'pet'},
+  ],
+};
+
+// =============================================
+// STATE
+// =============================================
+let state = {
+  tasks: [],
+  completions: {},
+  xp: {orin:0, wife:0},
+  coins: {orin:0, wife:0},
+  owned: ['bg_plains'],
+  equippedBg: 'bg_plains',
+  perks: [],
+  heroStats: {
+    orin:{atk:1,def:0,spd:1},
+    wife:{atk:1,def:0,spd:1},
+  },
+};
+
+let undoStack = [];
+let selAssign = 'orin';
+let selMode = 'anytime';
+let selDays = [];
+let calYear, calMonth, calSelected;
+let questFilter = 'all';
+let viewDateOffset = 0;  // 0=today, -1=yesterday, +1=tomorrow
+let shopTab = 'orin-weapons';
+let pendingDeleteId = null;
+
+// =============================================
+// SAVE / LOAD
+// =============================================
+function save() { localStorage.setItem('ql4', JSON.stringify(state)); }
+function loadState() {
+  const r = localStorage.getItem('ql4');
+  if (r) { try { const s=JSON.parse(r); state={...state,...s}; } catch(e){} }
+  if (!state.owned.includes('bg_plains')) state.owned.push('bg_plains');
+}
+
+// =============================================
+// UNDO
+// =============================================
+function pushUndo() { undoStack.push(JSON.stringify(state)); if(undoStack.length>40) undoStack.shift(); }
+function undo() {
+  if (!undoStack.length) { toast('💭','NOTHING TO UNDO','No recent actions to reverse.'); return; }
+  state = JSON.parse(undoStack.pop());
+  save(); renderAll(); toast('↩️','UNDONE!','Last action reversed.');
+}
+
+// =============================================
+// DATE HELPERS
+// =============================================
+function offsetDate(offset) {
+  const d=new Date(); d.setDate(d.getDate()+offset);
+  return fmtDate(d.getFullYear(),d.getMonth(),d.getDate());
+}
+function fmtDate(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+function parseDateStr(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function dayOfWeek(ds){return parseDateStr(ds).getDay()}
+function todayStr(){const d=new Date();return fmtDate(d.getFullYear(),d.getMonth(),d.getDate())}
+
+function viewDateStr(){return offsetDate(viewDateOffset)}
+function shiftDay(d){viewDateOffset+=d;renderQuestList()}
+
+function taskVisibleOnDate(task,dateStr){
+  if(task.mode==='anytime') return true;
+  if(task.mode==='date') return task.date===dateStr;
+  if(task.mode==='recurring') return task.days.includes(dayOfWeek(dateStr));
+  return false;
+}
+function tasksDueOnDate(ds){return state.tasks.filter(t=>taskVisibleOnDate(t,ds))}
+
+// =============================================
+// COMPLETION
+// =============================================
+function compKey(id,ds){return `${id}_${ds}`}
+function getComp(id,ds){return state.completions[compKey(id,ds)]||{orin:false,wife:false}}
+function isFullyDone(task,ds){
+  const c=getComp(task.id,ds);
+  if(task.assign==='both') return c.orin&&c.wife;
+  return c[task.assign];
+}
+
+// =============================================
+// XP / LEVEL / COINS
+// =============================================
+function getLevel(xp){for(let i=XP_LEVELS.length-1;i>=0;i--)if(xp>=XP_LEVELS[i])return i+1;return 1}
+function xpFloor(l){return XP_LEVELS[Math.min(l-1,XP_LEVELS.length-1)]}
+function xpCeil(l){return l>=XP_LEVELS.length?XP_LEVELS[XP_LEVELS.length-1]+9999:XP_LEVELS[l]}
+
+function xpMultiplier(){
+  if(state.perks.includes('xpBoost2')) return 1.5;
+  if(state.perks.includes('xpBoost1')) return 1.25;
+  return 1;
+}
+function coinBonus(){
+  if(state.perks.includes('coinBoost2')) return 5;
+  if(state.perks.includes('coinBoost1')) return 2;
+  return 0;
+}
+
+function awardXP(player, el) {
+  const amount = Math.round(XP_PER_TASK * xpMultiplier());
+  const prev = getLevel(state.xp[player]);
+  state.xp[player] += amount;
+  const nxt = getLevel(state.xp[player]);
+  if (el) showXpPop(el, `+${amount}XP`);
+  if (nxt > prev) {
+    const earned = (nxt-prev)*COINS_PER_LVL + coinBonus()*(nxt-prev);
+    state.coins[player] += earned;
+    setTimeout(()=>showLvlModal(player,nxt,earned),600);
+  }
+}
+function removeXP(player) {
+  const amount = Math.round(XP_PER_TASK * xpMultiplier());
+  state.xp[player]=Math.max(0,state.xp[player]-amount);
+}
+
+function updateXPDisplay(){
+  ['orin','wife'].forEach(p=>{
+    const xp=state.xp[p], lvl=getLevel(xp);
+    const pct=Math.min(100,((xp-xpFloor(lvl))/(xpCeil(lvl)-xpFloor(lvl)))*100);
+    const bar=document.getElementById(`${p}-bar`);
+    if(state.perks.includes('rainbowMode')){
+      bar.style.background='linear-gradient(90deg,#ff0080,#ff8c00,#f5c518,#00e676,#00cfcf,#b44fde)';
+      bar.style.backgroundSize='200%';
+    } else {
+      bar.style.background=p==='orin'?'var(--orin)':'var(--wife)';
+    }
+    bar.style.width=pct+'%';
+    document.getElementById(`${p}-xp-lbl`).textContent=`LVL ${lvl} · ${xp}XP`;
+    document.getElementById(`${p}-coins-top`).textContent=state.coins[p];
+    if(document.getElementById(`${p}-coins-hero`))document.getElementById(`${p}-coins-hero`).textContent=state.coins[p];
+  });
+}
+
+// =============================================
+// HERO STAGE RENDERING
+// =============================================
+function computeHeroSprite(player) {
+  const classes = player==='orin'
+    ? ['o_c1','o_c2','o_c3','o_c4','o_c5']
+    : ['w_c1','w_c2','w_c3','w_c4','w_c5'];
+  const sprites = player==='orin'
+    ? ['🧔','🧔','🤺','🤺','🦹‍♂️']
+    : ['👩','🧙‍♀️','🧝‍♀️','🧛‍♀️','👸'];
+  const base = player==='orin' ? '🩲' : '👙';
+
+  let sprite = base;
+  for(let i=classes.length-1;i>=0;i--) {
+    if(state.owned.includes(classes[i])){ sprite=sprites[i]; break; }
+  }
+  return sprite;
+}
+
+function computeHeroStats(player) {
+  const cats = player==='orin'
+    ? ['orin-weapons','orin-armor','orin-class']
+    : ['wife-weapons','wife-armor','wife-class'];
+  let atk=1,def=0,spd=1;
+  cats.forEach(cat=>{
+    SHOP_CATALOGUE[cat].forEach(item=>{
+      if(state.owned.includes(item.id)){atk+=item.atk||0;def+=item.def||0;spd+=item.spd||0;}
+    });
+  });
+  return {atk,def,spd};
+}
+
+function computeTitle(player) {
+  const lvl=getLevel(state.xp[player]);
+  const titles=player==='orin'?ORIN_TITLES:WIFE_TITLES;
+  return `LEVEL ${lvl} ${titles[Math.min(lvl-1,titles.length-1)]}`;
+}
+
+function renderHeroDisplay(){
+  ['orin','wife'].forEach(p=>{
+    const sprite=computeHeroSprite(p);
+    const stats=computeHeroStats(p);
+    const stage=document.getElementById(`${p}-stage`);
+    if(stage){stage.textContent=sprite;}
+    const titleEl=document.getElementById(`${p}-title`);
+    if(titleEl)titleEl.textContent=computeTitle(p);
+    const statEl=document.getElementById(`${p}-hstats`);
+    if(statEl)statEl.textContent=`ATK:${stats.atk} DEF:${stats.def} SPD:${stats.spd}`;
+  });
+
+  // Background
+  const bgItem=SHOP_CATALOGUE.backgrounds.find(b=>b.id===state.equippedBg);
+  const arena=document.getElementById('hero-arena');
+  if(arena&&bgItem){
+    arena.style.background=bgItem.bg;
+    arena.setAttribute('data-scene-label',bgItem.scene);
+  }
+
+  // Pet
+  const hasPet=state.perks.includes('pet');
+  let pet=document.getElementById('arena-pet');
+  if(hasPet&&!pet){
+    pet=document.createElement('div');
+    pet.id='arena-pet';
+    pet.style.cssText='position:absolute;bottom:32px;left:50%;transform:translateX(-50%);font-size:28px;animation:bob 1.5s steps(2) infinite;z-index:2';
+    pet.textContent='🐲';
+    arena.appendChild(pet);
+  } else if(!hasPet&&pet){
+    pet.remove();
+  }
+}
+
+// =============================================
+// SHOP
+// =============================================
+function setShopTab(tab, btn) {
+  shopTab = tab;
+  document.querySelectorAll('.shop-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderShop();
+}
+
+function renderShop(){
+  const grid=document.getElementById('shop-grid');
+  if(!grid) return;
+  grid.innerHTML='';
+  const items=SHOP_CATALOGUE[shopTab]||[];
+
+  items.forEach(item=>{
+    const owned=state.owned.includes(item.id);
+    const isEquippedBg=shopTab==='backgrounds'&&state.equippedBg===item.id;
+    const canAfford=state.coins[item.player||'orin']>=item.cost||(item.isFree)||shopTab==='backgrounds'&&state.coins.orin+state.coins.wife>=item.cost;
+    const prereqMet=!item.req||state.owned.includes(item.req);
+    const player=item.player||(shopTab.startsWith('orin')?'orin':'wife');
+    const playerCoins=shopTab==='backgrounds'?null:state.coins[player];
+    const affordable=shopTab==='backgrounds'?(state.coins.orin+state.coins.wife>=item.cost):(state.coins[player]>=item.cost);
+
+    const div=document.createElement('div');
+    div.className='shop-item'+((!owned&&!prereqMet)?' locked':'');
+
+    let actionHtml='';
+    if(item.isFree&&owned&&isEquippedBg){
+      actionHtml=`<div class="equipped-lbl">✓ ACTIVE</div>`;
+    } else if(owned&&shopTab==='backgrounds'&&isEquippedBg){
+      actionHtml=`<div class="equipped-lbl">✓ ACTIVE</div>`;
+    } else if(owned&&shopTab==='backgrounds'){
+      actionHtml=`<button class="shop-btn" onclick="equipBg('${item.id}')">EQUIP</button>`;
+    } else if(owned){
+      actionHtml=`<div class="owned-lbl">✓ OWNED</div>`;
+    } else if(!prereqMet){
+      actionHtml=`<div class="locked-lbl">🔒 LOCKED</div>`;
+    } else if(item.isFree){
+      actionHtml=`<button class="shop-btn" onclick="buyItem('${item.id}')">FREE!</button>`;
+    } else {
+      actionHtml=`<button class="shop-btn" onclick="buyItem('${item.id}')" ${affordable?'':'disabled'}>${affordable?'BUY':'NEED 🪙'}</button>`;
+    }
+
+    const tagColor=player==='orin'?'var(--orin)':'var(--wife)';
+    const tagLabel=shopTab.startsWith('orin')?'🗡️ ORIN':shopTab.startsWith('wife')?'🔮 WIFE':shopTab==='backgrounds'?'🏞️ SHARED':'💎 PERK';
+
+    div.innerHTML=`
+      <div class="shop-icon-big">${item.icon}</div>
+      <div class="shop-body">
+        <div class="shop-iname">${item.name}</div>
+        <div class="shop-idesc">${item.desc}</div>
+        ${item.stat?`<div class="shop-itag" style="color:var(--green)">📈 ${item.stat}</div>`:''}
+        <div class="shop-itag" style="color:${tagColor}">${tagLabel}</div>
+      </div>
+      <div class="shop-right">
+        <div class="shop-cost">${item.isFree?'FREE':'🪙'+item.cost}</div>
+        ${actionHtml}
+      </div>`;
+    grid.appendChild(div);
+  });
+}
+
+function buyItem(id){
+  const allItems=[...Object.values(SHOP_CATALOGUE).flat()];
+  const item=allItems.find(i=>i.id===id);
+  if(!item||state.owned.includes(id)) return;
+
+  const player=item.player||(shopTab.startsWith('orin')?'orin':'wife');
+  const cost=item.cost;
+
+  if(shopTab==='backgrounds'){
+    const total=state.coins.orin+state.coins.wife;
+    if(total<cost){toast('💸','NOT ENOUGH COINS',`Need 🪙${cost} total between both players.`);return;}
+    pushUndo();
+    // Deduct from whoever has more
+    if(state.coins.orin>=cost){state.coins.orin-=cost;}
+    else{const rem=cost-state.coins.orin;state.coins.orin=0;state.coins.wife-=rem;}
+    state.owned.push(id);
+    state.equippedBg=id;
+  } else if(item.type==='perk'){
+    // perks: use combined coins
+    const total=state.coins.orin+state.coins.wife;
+    if(total<cost){toast('💸','NOT ENOUGH COINS',`Need 🪙${cost} combined.`);return;}
+    pushUndo();
+    if(state.coins.orin>=cost){state.coins.orin-=cost;}
+    else{const rem=cost-state.coins.orin;state.coins.orin=0;state.coins.wife-=rem;}
+    state.owned.push(id);
+    state.perks.push(item.effect);
+  } else {
+    if(state.coins[player]<cost){toast('💸','NOT ENOUGH COINS',`${player.toUpperCase()} needs 🪙${cost}.`);return;}
+    pushUndo();
+    state.coins[player]-=cost;
+    state.owned.push(id);
+    // update hero stats
+    state.heroStats[player]=computeHeroStats(player);
+  }
+
+  save(); updateXPDisplay(); renderHeroDisplay(); renderShop();
+  toast('🎉','UPGRADE!',`${item.name} acquired!`);
+}
+
+function equipBg(id){
+  pushUndo();
+  state.equippedBg=id;
+  save(); renderHeroDisplay(); renderShop();
+}
+
+// =============================================
+// QUEST RENDERING
+// =============================================
+function setQFilter(f,btn){
+  questFilter=f;
+  document.querySelectorAll('.fil-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderQuestList();
+}
+
+function renderQuestList(){
+  const dateStr=viewDateStr();
+  const d=parseDateStr(dateStr);
+  const isToday=dateStr===todayStr();
+  const isTomorrow=viewDateOffset===1;
+  const isYesterday=viewDateOffset===-1;
+  let label=`${DAYS_SHORT[d.getDay()].toUpperCase()}, ${MONTHS[d.getMonth()].substring(0,3).toUpperCase()} ${d.getDate()}`;
+  if(isToday) label='TODAY · '+label;
+  else if(isTomorrow) label='TOMORROW · '+label;
+  else if(isYesterday) label='YESTERDAY · '+label;
+  document.getElementById('day-label-q').textContent=label;
+
+  const list=document.getElementById('quest-list');
+  list.innerHTML='';
+
+  let tasks=tasksDueOnDate(dateStr);
+  if(questFilter==='orin') tasks=tasks.filter(t=>t.assign==='orin'||t.assign==='both');
+  if(questFilter==='wife') tasks=tasks.filter(t=>t.assign==='wife'||t.assign==='both');
+  if(questFilter==='active') tasks=tasks.filter(t=>!isFullyDone(t,dateStr));
+  if(questFilter==='done')   tasks=tasks.filter(t=>isFullyDone(t,dateStr));
+
+  if(!tasks.length){
+    list.innerHTML=`<div class="empty"><span class="empty-icon">${isToday?'🌟':'📭'}</span>${isToday?'ALL CLEAR, HERO!':'NO QUESTS THIS DAY'}<br><small>${isToday?'ADD QUESTS FROM THE + TAB':'TRAVEL TO ANOTHER DAY'}</small></div>`;
+    return;
+  }
+  tasks.forEach(t=>list.appendChild(buildTaskEl(t,dateStr)));
+}
+
+function buildTaskEl(task, dateStr){
+  const c=getComp(task.id,dateStr);
+  const fully=isFullyDone(task,dateStr);
+  const li=document.createElement('li');
+  li.className=`task-item ${task.assign==='both'?'both-a':task.assign+'-a'} ${task.mode==='recurring'?'recurring':''} ${fully?'fully-done':''}`;
+  li.id=`ti-${task.id}`;
+
+  let checks='';
+  if(task.assign==='orin'||task.assign==='both'){
+    checks+=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <div class="chk ${c.orin?'checked':''}" onclick="toggleComp(${task.id},'orin','${dateStr}')">${c.orin?'✓':''}</div>
+      <div class="chk-lbl" style="color:var(--orin)">ORI</div></div>`;
+  }
+  if(task.assign==='wife'||task.assign==='both'){
+    checks+=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <div class="chk ${c.wife?'checked':''}" onclick="toggleComp(${task.id},'wife','${dateStr}')">${c.wife?'✓':''}</div>
+      <div class="chk-lbl" style="color:var(--wife)">WIF</div></div>`;
+  }
+
+  const modeIcon=task.mode==='recurring'?'🔁':task.mode==='date'?'📅':'♾️';
+  const assignIcon=task.assign==='orin'?'🗡️':task.assign==='wife'?'🔮':'🤝';
+  let metaStr=`${modeIcon} `;
+  if(task.mode==='recurring') metaStr+=task.days.map(d=>DAYS_ABR[d].substring(0,2)).join(' ');
+  else if(task.mode==='date') metaStr+=task.date;
+  else metaStr+='DAILY';
+  metaStr+=` · ${assignIcon}`;
+
+  li.innerHTML=`
+    <div class="chk-wrap">${checks}</div>
+    <div class="task-body">
+      <div class="task-text">${esc(task.name)}</div>
+      <div class="task-meta">${metaStr}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+      <div class="task-xp">⭐${XP_PER_TASK}</div>
+      <button class="task-del" onclick="confirmDelete(${task.id},'${esc(task.name)}')">✕</button>
+    </div>`;
+  return li;
+}
+
+// =============================================
+// COMPLETION
+// =============================================
+function toggleComp(taskId, player, dateStr){
+  pushUndo();
+  const key=compKey(taskId,dateStr);
+  if(!state.completions[key]) state.completions[key]={orin:false,wife:false};
+  const c=state.completions[key];
+  const task=state.tasks.find(t=>t.id===taskId);
+  const wasFully=isFullyDone(task,dateStr);
+  c[player]=!c[player];
+  const nowFully=isFullyDone(task,dateStr);
+
+  const el=document.getElementById(`ti-${taskId}`);
+
+  if(!wasFully&&nowFully){
+    // EXPLOSION!
+    boom(el);
+    if(task.assign==='both'){awardXP('orin',el);awardXP('wife',el);}
+    else awardXP(task.assign,el);
+  } else if(wasFully&&!nowFully){
+    if(task.assign==='both'){removeXP('orin');removeXP('wife');}
+    else removeXP(task.assign);
+  }
+
+  updateXPDisplay();
+  save();
+  // Re-render after boom delay
+  setTimeout(()=>{
+    renderQuestList();
+    if(calSelected) renderCalDetail(calSelected);
+  }, nowFully ? 600 : 0);
+}
+
+// =============================================
+// EXPLOSION!
+// =============================================
+const PARTICLES=['⭐','💥','✨','🌟','⚡','💫','🔥','🎆','🎇','★','◆','▲'];
+const PARTICLES_MEGA=['💥','🔥','⭐','🌟','💫','⚡','🎆','🎇','✨','🏆','👑','🌈','💎'];
+
+function boom(el){
+  if(!el) return;
+  el.classList.add('exploding');
+  // Screen flash
+  const flash=document.createElement('div');
+  flash.className='star-flash';
+  document.body.appendChild(flash);
+  setTimeout(()=>flash.remove(),500);
+
+  const rect=el.getBoundingClientRect();
+  const cx=rect.left+rect.width/2;
+  const cy=rect.top+rect.height/2;
+  const isMega=state.perks.includes('megaBoom');
+  const count=isMega?20:12;
+  const parts=isMega?PARTICLES_MEGA:PARTICLES;
+
+  for(let i=0;i<count;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    const angle=(360/count)*i+(Math.random()*30-15);
+    const dist=isMega?(80+Math.random()*120):(50+Math.random()*80);
+    const tx=Math.cos(angle*Math.PI/180)*dist;
+    const ty=Math.sin(angle*Math.PI/180)*dist;
+    const dur=(0.6+Math.random()*0.6)+'s';
+    const rot=(Math.random()*720-360)+'deg';
+    p.style.cssText=`left:${cx}px;top:${cy}px;--tx:${tx}px;--ty:${ty}px;--dur:${dur};--rot:${rot}`;
+    p.textContent=parts[Math.floor(Math.random()*parts.length)];
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),1200);
+  }
+
+  // Big center burst text
+  const burst=document.createElement('div');
+  burst.style.cssText=`position:fixed;left:${cx}px;top:${cy-20}px;font-family:'Press Start 2P',monospace;font-size:${isMega?14:10}px;color:var(--yellow);text-shadow:2px 2px 0 #7a6000;pointer-events:none;z-index:9997;animation:xppop 1s forwards;transform:translateX(-50%)`;
+  burst.textContent=isMega?'★ MEGA CLEAR! ★':'QUEST CLEAR!';
+  document.body.appendChild(burst);
+  setTimeout(()=>burst.remove(),1100);
+}
+
+// =============================================
+// DELETE
+// =============================================
+function confirmDelete(id, name){
+  pendingDeleteId=id;
+  document.getElementById('confirm-name').textContent=`Delete "${name}"?`;
+  document.getElementById('confirm-yes-btn').onclick=()=>doDelete();
+  document.getElementById('confirm-modal').classList.add('show');
+}
+function closeConfirm(){document.getElementById('confirm-modal').classList.remove('show');pendingDeleteId=null;}
+function doDelete(){
+  if(!pendingDeleteId) return;
+  pushUndo();
+  state.tasks=state.tasks.filter(t=>t.id!==pendingDeleteId);
+  Object.keys(state.completions).forEach(k=>{if(k.startsWith(pendingDeleteId+'_'))delete state.completions[k];});
+  save(); closeConfirm(); renderQuestList(); if(calSelected) renderCalDetail(calSelected);
+}
+
+// =============================================
+// ADD TASK
+// =============================================
+function setAssign(who,btn){
+  selAssign=who;
+  document.querySelectorAll('.assign-btn').forEach(b=>b.className='assign-btn');
+  btn.classList.add(`sel-${who}`);
+}
+function setMode(mode,btn){
+  selMode=mode;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('date-section').style.display=mode==='date'?'block':'none';
+  document.getElementById('recur-section').style.display=mode==='recurring'?'block':'none';
+}
+function toggleDay(d,btn){
+  if(selDays.includes(d)){selDays=selDays.filter(x=>x!==d);btn.classList.remove('sel');}
+  else{selDays.push(d);btn.classList.add('sel');}
+}
+function addTask(){
+  const name=document.getElementById('inp-name').value.trim();
+  if(!name){toast('❌','MISSING NAME','Please enter a quest name!');return;}
+  if(selMode==='recurring'&&selDays.length===0){toast('❌','NO DAYS','Pick at least one day!');return;}
+  if(selMode==='date'&&!document.getElementById('inp-date').value){toast('❌','NO DATE','Please pick a due date!');return;}
+  pushUndo();
+  state.tasks.push({
+    id:Date.now(),name,assign:selAssign,mode:selMode,
+    date:selMode==='date'?document.getElementById('inp-date').value:null,
+    days:selMode==='recurring'?[...selDays]:[],
+    created:Date.now()
+  });
+  save();
+  document.getElementById('inp-name').value='';
+  document.getElementById('inp-date').value='';
+  selDays=[];
+  document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('sel'));
+  toast('⚔️','QUEST ADDED!',`"${name}" is now active!`);
+  showScreen('quests');
+}
+
+// =============================================
+// CALENDAR
+// =============================================
+function initCal(){const n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();}
+function calMove(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCal();}
+function renderCal(){
+  document.getElementById('cal-month-lbl').textContent=`${MONTHS[calMonth]} ${calYear}`;
+  const grid=document.getElementById('cal-grid');
+  const today=todayStr();
+  grid.innerHTML=DAYS_SHORT.map(d=>`<div class="cal-dow">${d[0]}</div>`).join('');
+  const first=new Date(calYear,calMonth,1).getDay();
+  const dim=new Date(calYear,calMonth+1,0).getDate();
+  for(let i=0;i<first;i++) grid.innerHTML+=`<div class="cal-day empty-day"></div>`;
+  for(let d=1;d<=dim;d++){
+    const ds=fmtDate(calYear,calMonth,d);
+    const hasTasks=tasksDueOnDate(ds).length>0;
+    const isT=ds===today, isSel=ds===calSelected;
+    grid.innerHTML+=`<div class="cal-day${isT?' today':''}${isSel?' selected':''}${hasTasks?' has-tasks':''}" onclick="selectCalDay('${ds}')">${d}</div>`;
+  }
+}
+function selectCalDay(ds){calSelected=ds;renderCal();renderCalDetail(ds);}
+function renderCalDetail(ds){
+  const hdr=document.getElementById('cal-detail-hdr');
+  const list=document.getElementById('cal-task-list');
+  list.innerHTML='';
+  const d=parseDateStr(ds);
+  hdr.style.display='block';
+  hdr.textContent=`📅 ${DAYS_SHORT[d.getDay()].toUpperCase()} ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  const tasks=tasksDueOnDate(ds);
+  if(!tasks.length){list.innerHTML=`<div class="empty" style="padding:20px"><span class="empty-icon" style="font-size:28px">📭</span>NO QUESTS</div>`;return;}
+  tasks.forEach(t=>list.appendChild(buildTaskEl(t,ds)));
+}
+
+// =============================================
+// MODALS
+// =============================================
+function showLvlModal(player,lvl,coins){
+  document.getElementById('lvl-num').textContent=`⭐ LVL ${lvl} ⭐`;
+  document.getElementById('lvl-txt').textContent=`${player.toUpperCase()} REACHED LEVEL ${lvl}!`;
+  document.getElementById('lvl-coins').textContent=`+${coins} 🪙 COINS EARNED!`;
+  document.getElementById('lvl-modal').classList.add('show');
+}
+function closeLvlModal(){document.getElementById('lvl-modal').classList.remove('show');}
+function toast(icon,title,msg){
+  document.getElementById('toast-icon').textContent=icon;
+  document.getElementById('toast-title').textContent=title;
+  document.getElementById('toast-msg').textContent=msg;
+  document.getElementById('toast-modal').classList.add('show');
+}
+function closeToast(){document.getElementById('toast-modal').classList.remove('show');}
+function showXpPop(el,txt){
+  const r=el.getBoundingClientRect();
+  const p=document.createElement('div');
+  p.className='xp-pop';p.textContent=txt;
+  p.style.left=(r.left+r.width/2-20)+'px';p.style.top=(r.top+window.scrollY)+'px';
+  document.body.appendChild(p);setTimeout(()=>p.remove(),1400);
+}
+
+// =============================================
+// SCREEN NAV
+// =============================================
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`sc-${name}`).classList.add('active');
+  document.querySelector(`[data-sc="${name}"]`).classList.add('active');
+  if(name==='quests') renderQuestList();
+  if(name==='calendar'){renderCal();if(calSelected)renderCalDetail(calSelected);}
+  if(name==='hero'){updateXPDisplay();renderHeroDisplay();renderShop();}
+}
+
+function renderAll(){
+  updateXPDisplay();
+  renderQuestList();
+  if(document.getElementById('sc-hero').classList.contains('active')){renderHeroDisplay();renderShop();}
+  if(document.getElementById('sc-calendar').classList.contains('active')) renderCal();
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// =============================================
+// INIT
+// =============================================
+loadState();
+initCal();
+const _td=new Date();
+document.getElementById('inp-date').value=`${_td.getFullYear()}-${String(_td.getMonth()+1).padStart(2,'0')}-${String(_td.getDate()).padStart(2,'0')}`;
+renderAll();
+
+let _lastT=0;
+document.addEventListener('touchend',e=>{const n=Date.now();if(n-_lastT<300)e.preventDefault();_lastT=n;},{passive:false});
+</script>
+</body>
+</html>
