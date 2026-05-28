@@ -750,7 +750,7 @@ function closeLvlModal(){document.getElementById('lvl-modal').classList.remove('
 // ============================================================
 // CANVAS BATTLE ENGINE
 // ============================================================
-const LOGI_W=320, LOGI_H=240;
+const LOGI_W=320, LOGI_H=400;
 let battleCanvas, battleCtx;
 let _battleRAF=null, _lastFrameTime=0;
 let _heroAnim={orin:{frame:0,timer:0},wife:{frame:0,timer:0}};
@@ -779,7 +779,10 @@ function resizeCanvas(){
   const xpPanel=document.querySelector('.xp-panel');
   const nav=document.querySelector('.nav');
   const usedH=(hdr?hdr.offsetHeight:40)+(xpPanel?xpPanel.offsetHeight:30)+(nav?nav.offsetHeight:50);
-  const h=Math.max(200, window.innerHeight - usedH);
+  // Cap height so canvas doesn't get too tall on portrait phones
+  const availH=window.innerHeight - usedH;
+  const maxH=Math.round(w * 1.4); // max 1.4:1 ratio
+  const h=Math.max(200, Math.min(availH, maxH));
   wrap.style.height=h+'px';
   battleCanvas.width=LOGI_W;
   battleCanvas.height=LOGI_H;
@@ -865,7 +868,7 @@ function drawBackground(ctx,bgKey,dt){
   }
 
   // Ground
-  const gY=Math.round(H*0.68);
+  const gY=Math.round(H*0.62);
   const gGrad=ctx.createLinearGradient(0,gY,0,H);
   gGrad.addColorStop(0,pal.groundTop);
   gGrad.addColorStop(1,pal.groundBot);
@@ -1194,11 +1197,13 @@ function drawFrame(dt){
   const oCls=getHeroClass('orin',oLvl),wCls=getHeroClass('wife',wLvl);
 
   // Positions (logical)
-  drawOrin(ctx,48,130,oCls,_heroAnim.orin.frame);
-  drawWife(ctx,82,135,wCls,_heroAnim.wife.frame);
+  // Ground line at 68% of canvas height
+  const groundY=Math.round(LOGI_H*0.62);
+  drawOrin(ctx,52,groundY-30,oCls,_heroAnim.orin.frame);
+  drawWife(ctx,88,groundY-25,wCls,_heroAnim.wife.frame);
   if(state.battle&&state.battle.monsterId!==undefined){
     const m=MONSTERS[state.battle.monsterId];
-    if(m) drawMonster(ctx,248,120,m,_bossAnim.frame);
+    if(m) drawMonster(ctx,248,groundY-40,m,_bossAnim.frame);
   }
 
   if(_shakeTimer>0){
