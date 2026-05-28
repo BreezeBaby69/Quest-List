@@ -839,31 +839,34 @@ function drawBackground(ctx,bgKey,dt){
   if(bgKey==='plains'){
     for(let i=0;i<5;i++){
       const tx=((i*76+mgX)%(W+40))-20;
-      ctx.fillStyle='#3d2010';ctx.fillRect(tx+8,128,5,28);
-      ctx.fillStyle='#1a4a1a';ctx.fillRect(tx,108,22,28);
-      ctx.fillStyle='#2a6a2a';ctx.fillRect(tx+4,98,14,18);
+      ctx.fillStyle='#3d2010';ctx.fillRect(tx+8,Math.round(H*0.62),5,Math.round(H*0.12));
+      ctx.fillStyle='#1a4a1a';ctx.fillRect(tx,Math.round(H*0.50),22,Math.round(H*0.14));
+      ctx.fillStyle='#2a6a2a';ctx.fillRect(tx+4,Math.round(H*0.44),14,Math.round(H*0.09));
     }
   } else if(bgKey==='dungeon'){
     const now=Date.now();
     for(let i=0;i<5;i++){
       const tx=((i*65+mgX)%(W+20))-10;
-      ctx.fillStyle='#6a4020';ctx.fillRect(tx,122,4,14);
+      const ty=Math.round(H*0.6);
+      ctx.fillStyle='#6a4020';ctx.fillRect(tx,ty,4,14);
       ctx.fillStyle=Math.sin(now/180+i)>0?'#ff8800':'#ffaa00';
-      ctx.fillRect(tx-2,114,8,10);
-      ctx.fillStyle='rgba(255,130,0,0.1)';ctx.fillRect(tx-8,106,18,22);
+      ctx.fillRect(tx-2,ty-8,8,10);
+      ctx.fillStyle='rgba(255,130,0,0.1)';ctx.fillRect(tx-8,ty-16,18,22);
     }
   } else if(bgKey==='castle'){
     for(let i=0;i<6;i++){
       const tx=((i*56+mgX)%(W+20))-10;
-      ctx.fillStyle='#201830';ctx.fillRect(tx,98,10,60);
-      ctx.fillStyle='#160c22';ctx.fillRect(tx-2,90,14,12);
-      ctx.fillStyle='rgba(180,100,255,0.08)';ctx.fillRect(tx,90,10,8);
+      const ty=Math.round(H*0.5);
+      ctx.fillStyle='#201830';ctx.fillRect(tx,ty,10,Math.round(H*0.2));
+      ctx.fillStyle='#160c22';ctx.fillRect(tx-2,ty-8,14,12);
+      ctx.fillStyle='rgba(180,100,255,0.08)';ctx.fillRect(tx,ty-8,10,8);
     }
   } else if(bgKey==='volcano'){
     for(let i=0;i<3;i++){
       const tx=((i*110+mgX)%(W+50))-25;
-      ctx.fillStyle='#2a0800';ctx.fillRect(tx,105,32,90);
-      ctx.fillStyle='#180400';ctx.fillRect(tx+6,98,20,16);
+      const ty=Math.round(H*0.52);
+      ctx.fillStyle='#2a0800';ctx.fillRect(tx,ty,32,Math.round(H*0.3));
+      ctx.fillStyle='#180400';ctx.fillRect(tx+6,ty-8,20,16);
     }
   }
 
@@ -1197,13 +1200,14 @@ function drawFrame(dt){
   const oCls=getHeroClass('orin',oLvl),wCls=getHeroClass('wife',wLvl);
 
   // Positions (logical)
-  // Ground line at 68% of canvas height
+  // Place sprites in upper portion of canvas, well above trees
   const groundY=Math.round(LOGI_H*0.62);
-  drawOrin(ctx,52,groundY-30,oCls,_heroAnim.orin.frame);
-  drawWife(ctx,88,groundY-25,wCls,_heroAnim.wife.frame);
+  const spriteY=Math.round(LOGI_H*0.22); // upper 22% — clearly visible
+  drawOrin(ctx,52,spriteY,oCls,_heroAnim.orin.frame);
+  drawWife(ctx,90,spriteY+5,wCls,_heroAnim.wife.frame);
   if(state.battle&&state.battle.monsterId!==undefined){
     const m=MONSTERS[state.battle.monsterId];
-    if(m) drawMonster(ctx,248,groundY-40,m,_bossAnim.frame);
+    if(m) drawMonster(ctx,240,spriteY-10,m,_bossAnim.frame);
   }
 
   if(_shakeTimer>0){
@@ -1714,6 +1718,7 @@ function addTask(){
   selDays=[];
   document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('sel'));
   toast('⚔️','QUEST ADDED!',`"${name}" is now active!`);
+  viewDateOffset=0;
   showScreen('quests');
 }
 
