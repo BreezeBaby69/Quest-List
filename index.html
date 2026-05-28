@@ -9,26 +9,6 @@
 <meta name="apple-mobile-web-app-title" content="Quest List">
 <title>⚔️ Quest List</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<!-- FIREBASE SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-  const firebaseConfig = {
-    apiKey: "AIzaSyBHKkUx-rcghW5LQt5CX2ZWzcpKl53ZZjc",
-    authDomain: "quest-list-60b96.firebaseapp.com",
-    databaseURL: "https://quest-list-60b96-default-rtdb.firebaseio.com",
-    projectId: "quest-list-60b96",
-    storageBucket: "quest-list-60b96.firebasestorage.app",
-    messagingSenderId: "35485000332",
-    appId: "1:35485000332:web:59aa2dae39f144976651a9"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const stateRef = ref(db, "questlist/state");
-  window._fbSet = (data) => set(stateRef, data);
-  window._fbOnValue = (cb) => onValue(stateRef, cb);
-  window._fbLoaded = true;
-</script>
 <style>
 :root{
   --bg:#0a0a0f;--panel:#12121e;--panel2:#1a1a2e;--border:#2a2a4a;
@@ -69,6 +49,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .screen{display:none;padding:12px;animation:fadein .15s steps(3)}
 .screen.active{display:block}
+#sc-hero.active{padding:0!important;display:block}
 @keyframes fadein{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 
 /* SECTION HEADER */
@@ -158,170 +139,228 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .cal-day.empty-day{opacity:.25;cursor:default}
 .cal-detail-hdr{font-size:7px;color:var(--cyan);margin-bottom:9px;display:none}
 
-/* ===== HERO / SHOP SCREEN ===== */
-.hero-arena{
-  display:flex;gap:10px;margin-bottom:14px;
-  border:3px solid var(--border);
-  padding:14px 10px 10px;
-  position:relative;
-  min-height:220px;
-  background:var(--scene-bg);
-  transition:background .5s;
-  overflow:hidden;
+/* ===== BATTLE SCREEN ===== */
+.battle-screen-wrap{display:block}
+
+#battle-canvas-wrap{
+  position:relative;overflow:hidden;background:#050510;
+  width:100%;
 }
-.hero-arena::before{content:attr(data-scene-label);position:absolute;top:5px;left:8px;font-family:'VT323',monospace;font-size:12px;color:rgba(255,255,255,.3)}
-/* Ground line */
-.hero-arena::after{content:'';position:absolute;bottom:28px;left:0;right:0;height:3px;background:rgba(255,255,255,.08)}
+#battle-canvas{display:block;width:100%;image-rendering:pixelated;image-rendering:crisp-edges}
 
-.hero-card{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1}
-.hero-stage{
-  width:80px;height:100px;
-  display:flex;align-items:flex-end;justify-content:center;
-  position:relative;
-  animation:heroFloat 2s steps(2) infinite;
+/* Boss HUD */
+.boss-hud{
+  position:absolute;top:0;left:0;right:0;padding:6px 8px 5px;
+  background:linear-gradient(180deg,rgba(0,0,0,.9) 0%,transparent 100%);
+  z-index:10;pointer-events:none;
 }
-@keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.boss-name-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.boss-name-lbl{font-family:'Press Start 2P',monospace;font-size:6px;color:#e84560;text-shadow:1px 1px 0 #000}
+.boss-hp-txt{font-family:'VT323',monospace;font-size:14px;color:#ff9999}
+.boss-hp-bg{background:#1a0000;border:2px solid #4a0000;height:9px;position:relative;overflow:hidden}
+.boss-hp-fill{position:absolute;inset:0;background:linear-gradient(90deg,#e84560,#ff4466);transition:width .35s steps(6)}
+.boss-hp-fill::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.25)}
+.boss-hp-fill.danger{background:linear-gradient(90deg,#ff6600,#ffaa00)}
+.boss-tier-badge{font-family:'VT323',monospace;font-size:11px;color:#666;margin-top:2px}
 
-/* ---- PIXEL HERO LAYERS ---- */
-.pixel-hero{position:relative;width:56px;height:88px;image-rendering:pixelated}
-.ph-layer{position:absolute;inset:0;width:56px;height:88px}
-
-/* Shadow under feet */
-.ph-shadow{
-  position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
-  width:36px;height:6px;
-  background:radial-gradient(ellipse,rgba(0,0,0,.5) 0%,transparent 70%);
-  pointer-events:none;
+/* Hero HUD */
+.hero-hud{
+  position:absolute;bottom:0;left:0;right:0;
+  display:flex;align-items:flex-end;
+  background:linear-gradient(0deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.5) 70%,transparent 100%);
+  z-index:10;pointer-events:none;padding:5px 8px 6px;gap:6px;
 }
+.hero-hud-half{flex:1}
+.hero-hud-half.right-hud{text-align:right}
+.hhc-name{font-family:'Press Start 2P',monospace;font-size:5px;margin-bottom:2px}
+.hhc-name.orin{color:#e84560}
+.hhc-name.wife{color:#b44fde}
+.hhc-class{font-family:'VT323',monospace;font-size:12px;color:#888;margin-bottom:3px}
+.hhc-xp-bg{background:#0a0a0a;border:1px solid #333;height:4px}
+.hhc-xp-fill{height:100%;transition:width .4s steps(6)}
+.hhc-xp-fill.orin{background:#e84560}
+.hhc-xp-fill.wife{background:#b44fde}
+.hhc-lvl{font-family:'VT323',monospace;font-size:11px;color:#666;margin-top:1px}
 
-/* Each layer is drawn via box-shadow pixel art on a 1px pseudo-element */
-.ph-body::before,.ph-armor::before,.ph-weapon::before,.ph-class-fx::before{
-  content:'';display:block;
-  width:4px;height:4px; /* 1 "pixel" unit = 4px */
-  position:absolute;
-  top:0;left:0;
+/* Power bar */
+.power-hud{text-align:center;flex-shrink:0;min-width:60px}
+.power-label{font-family:'Press Start 2P',monospace;font-size:4px;color:#f5c518;margin-bottom:2px}
+.power-bg{background:#111;border:2px solid #555;height:6px;width:60px;margin:0 auto}
+.power-fill{height:100%;background:linear-gradient(90deg,#f5c518,#ff8c00);transition:width .3s steps(5);width:0%}
+.power-fill.full{background:linear-gradient(90deg,#fff,#f5c518);animation:powerPulse .4s steps(2) infinite alternate}
+@keyframes powerPulse{from{opacity:.7}to{opacity:1}}
+
+/* DMG pops */
+.dmg-pop{
+  position:absolute;font-family:'Press Start 2P',monospace;
+  pointer-events:none;z-index:50;text-shadow:2px 2px 0 #000;
+  animation:dmgFloat .95s steps(8) forwards;
 }
+@keyframes dmgFloat{
+  0%{opacity:1;transform:translateY(0) scale(1.3)}
+  45%{opacity:1;transform:translateY(-28px) scale(1)}
+  100%{opacity:0;transform:translateY(-52px) scale(.55)}
+}
+.dmg-pop.normal{font-size:8px;color:#f5c518}
+.dmg-pop.crit{font-size:11px;color:#ff3300}
+.dmg-pop.orin-dmg{color:#e84560}
+.dmg-pop.wife-dmg{color:#b44fde}
 
-.hero-name{font-size:6px;margin:6px 0 2px;text-align:center}
-.hero-name.orin{color:var(--orin)}
-.hero-name.wife{color:var(--wife)}
-.hero-title{font-family:'VT323',monospace;font-size:12px;color:var(--gray);text-align:center;min-height:15px}
-.hero-stats{font-family:'VT323',monospace;font-size:11px;margin-top:3px;text-align:center;color:#aaa;line-height:1.6}
-.hero-coins-badge{font-family:'VT323',monospace;font-size:13px;color:var(--gold);margin-top:2px}
+/* Screen shake */
+@keyframes screenShake{
+  0%{transform:translate(0,0)}15%{transform:translate(-5px,3px)}
+  30%{transform:translate(5px,-3px)}45%{transform:translate(-4px,2px)}
+  60%{transform:translate(4px,-1px)}75%{transform:translate(-2px,2px)}
+  90%{transform:translate(2px,-1px)}100%{transform:translate(0,0)}
+}
+/* Victory */
+@keyframes victoryPulse{
+  0%,100%{filter:brightness(1)}25%{filter:brightness(2.5) hue-rotate(45deg)}
+  50%{filter:brightness(3) hue-rotate(120deg)}75%{filter:brightness(2) hue-rotate(220deg)}
+}
+.victory-flash{animation:victoryPulse .7s steps(5) forwards}
 
-/* Equipped item badges row */
-.hero-equip-row{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap;justify-content:center;min-height:20px}
-.equip-badge{font-size:14px;background:var(--panel2);border:1px solid var(--border);padding:2px 4px;border-radius:0;position:relative;cursor:default}
-.equip-badge.slot-empty{font-size:9px;color:#333;font-family:'VT323',monospace;padding:3px 4px;border-style:dashed}
+/* CLASS CHANGE */
+.class-change-overlay{
+  position:fixed;inset:0;z-index:5000;
+  display:none;align-items:center;justify-content:center;flex-direction:column;
+  background:rgba(0,0,0,.96);
+}
+.class-change-overlay.show{display:flex;animation:ccIn .25s steps(4)}
+@keyframes ccIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+.cc-stars{font-size:24px;margin-bottom:6px;animation:bob .8s steps(2) infinite}
+.cc-eyecatch{font-family:'Press Start 2P',monospace;font-size:7px;color:#00cfcf;
+  margin-bottom:8px;animation:ccPulse .5s steps(2) infinite alternate}
+@keyframes ccPulse{from{opacity:.4}to{opacity:1}}
+.cc-canvas{image-rendering:pixelated;margin:8px 0;filter:drop-shadow(0 0 16px #f5c518)}
+.cc-hero-name{font-family:'Press Start 2P',monospace;font-size:6px;margin-bottom:4px}
+.cc-hero-name.orin{color:#e84560}
+.cc-hero-name.wife{color:#b44fde}
+.cc-class-name{font-family:'Press Start 2P',monospace;font-size:9px;color:#f5c518;
+  text-shadow:3px 3px 0 #7a6000;margin-bottom:14px}
+.cc-btn{background:#f5c518;color:#000;font-family:'Press Start 2P',monospace;font-size:7px;
+  border:none;padding:11px 22px;cursor:pointer;
+  border-bottom:4px solid #7a6000;border-right:4px solid #7a6000}
+.cc-btn:active{transform:translate(2px,2px);border-bottom-width:2px;border-right-width:2px}
 
-/* divider */
-.hero-vs{display:flex;align-items:center;justify-content:center;font-size:10px;color:#333;flex-direction:column;gap:4px;padding:0 4px;z-index:1}
-.hero-vs span{color:var(--yellow);font-size:7px}
+/* BOSS INTRO */
+.boss-intro-overlay{
+  position:fixed;inset:0;z-index:6000;
+  display:none;align-items:center;justify-content:center;flex-direction:column;
+  background:#000;
+}
+.boss-intro-overlay.show{display:flex}
+.bi-warning{font-family:'Press Start 2P',monospace;font-size:7px;color:#e84560;
+  animation:biWarn .15s steps(2) infinite;margin-bottom:12px}
+@keyframes biWarn{0%,100%{opacity:1}50%{opacity:0}}
+.bi-canvas{image-rendering:pixelated;margin-bottom:10px;
+  animation:biEntrance .5s steps(5) forwards}
+@keyframes biEntrance{from{transform:translateX(160px);opacity:0}to{transform:translateX(0);opacity:1}}
+.bi-name{font-family:'Press Start 2P',monospace;font-size:8px;color:#f5c518;
+  text-shadow:3px 3px 0 #7a6000;text-align:center;margin-bottom:4px;
+  animation:biSlam .4s steps(3) forwards}
+@keyframes biSlam{from{transform:scale(2.5);opacity:0}to{transform:scale(1);opacity:1}}
+.bi-tier{font-family:'VT323',monospace;font-size:16px;color:#e84560;margin-bottom:8px}
+.bi-sub{font-family:'VT323',monospace;font-size:17px;color:#888}
 
-/* Shop equip button */
-.equip-btn{background:var(--panel2);border:2px solid var(--cyan);color:var(--cyan);font-family:'Press Start 2P',monospace;font-size:5px;padding:5px 7px;cursor:pointer;transition:all .1s;white-space:nowrap}
-.equip-btn:hover{background:var(--cyan);color:#000}
-.equip-btn.active-equip{background:var(--cyan);color:#000}
-
-/* SHOP */
-.shop-tabs{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;padding-bottom:3px}
-.shop-tab{font-family:'VT323',monospace;font-size:14px;padding:5px 10px;border:2px solid var(--border);background:var(--panel);color:var(--gray);cursor:pointer;white-space:nowrap;flex-shrink:0}
-.shop-tab.active{border-color:var(--yellow);color:var(--yellow);background:var(--panel2)}
-.shop-grid{display:flex;flex-direction:column;gap:7px}
-.shop-item{background:var(--panel);border:2px solid var(--border);padding:10px;display:flex;align-items:center;gap:10px;transition:border-color .15s}
-.shop-item:hover{border-color:#3a3a5a}
-.shop-item.locked{opacity:.4}
-.shop-icon-big{font-size:30px;flex-shrink:0;width:40px;text-align:center}
-.shop-body{flex:1;min-width:0}
-.shop-iname{font-family:'VT323',monospace;font-size:17px;line-height:1.2}
-.shop-idesc{font-family:'VT323',monospace;font-size:12px;color:var(--gray);margin-top:2px}
-.shop-itag{font-family:'VT323',monospace;font-size:11px;margin-top:2px}
-.shop-right{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
-.shop-cost{font-family:'VT323',monospace;font-size:15px;color:var(--gold)}
-.shop-btn{background:var(--panel2);border:2px solid var(--gold);color:var(--gold);font-family:'Press Start 2P',monospace;font-size:5px;padding:5px 7px;cursor:pointer;transition:all .1s;white-space:nowrap}
-.shop-btn:hover:not(:disabled){background:var(--gold);color:#000}
-.shop-btn:disabled{border-color:#333;color:#444;cursor:default;background:var(--panel)}
-.owned-lbl{font-family:'VT323',monospace;font-size:13px;color:var(--green)}
-.locked-lbl{font-family:'VT323',monospace;font-size:11px;color:#444}
-.equipped-lbl{font-family:'VT323',monospace;font-size:11px;color:var(--cyan)}
+/* Particles */
+.particle{position:fixed;pointer-events:none;z-index:4000;font-size:14px;
+  animation:partFly .8s steps(6) forwards}
+@keyframes partFly{
+  0%{opacity:1;transform:translate(0,0) scale(1)}
+  100%{opacity:0;transform:translate(var(--tx,0px),var(--ty,-60px)) scale(.2)}
+}
 
 /* MODALS */
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:10000;display:none;align-items:center;justify-content:center;padding:14px}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-ov.show{display:flex}
-.modal{background:var(--panel2);border:3px solid var(--yellow);padding:22px 18px;max-width:310px;width:100%;text-align:center;box-shadow:6px 6px 0 #000,0 0 40px rgba(245,197,24,.25);animation:popIn .2s steps(3)}
-@keyframes popIn{from{transform:scale(.4) rotate(-3deg)}to{transform:scale(1) rotate(0deg)}}
-.modal h2{font-size:8px;color:var(--yellow);margin-bottom:10px}
-.modal .big{font-size:26px;margin:8px 0}
-.modal p{font-family:'VT323',monospace;font-size:17px;color:var(--cyan);margin-bottom:14px}
-.modal-close{background:var(--yellow);color:#000;border:none;font-family:'Press Start 2P',monospace;font-size:7px;padding:10px 18px;cursor:pointer;border-bottom:3px solid #7a6000;border-right:3px solid #7a6000}
+.modal{background:var(--panel2);border:3px solid var(--yellow);padding:20px 16px;max-width:320px;width:100%;text-align:center}
+.modal h2{font-size:9px;color:var(--yellow);margin-bottom:10px;text-shadow:2px 2px 0 #7a6000}
+.modal p{font-family:'VT323',monospace;font-size:17px;color:#ccc;margin-bottom:12px}
+.modal .big{font-size:28px;margin-bottom:8px;animation:bob 1s steps(2) infinite}
+.modal-close{background:var(--green);color:#000;font-family:'Press Start 2P',monospace;font-size:7px;border:none;padding:10px 18px;cursor:pointer;border-bottom:3px solid #007a3d;border-right:3px solid #007a3d}
 .modal-close:active{transform:translate(2px,2px);border-bottom-width:1px;border-right-width:1px}
-
-/* CONFIRM MODAL */
-.confirm-modal{background:var(--panel2);border:3px solid var(--red);padding:22px 18px;max-width:300px;width:100%;text-align:center;box-shadow:6px 6px 0 #000;animation:popIn .2s steps(3)}
-.confirm-modal h2{font-size:7px;color:var(--red);margin-bottom:10px}
-.confirm-modal p{font-family:'VT323',monospace;font-size:16px;color:var(--white);margin-bottom:16px}
+.confirm-modal{background:var(--panel2);border:3px solid var(--red);padding:20px 16px;max-width:300px;width:100%;text-align:center}
+.confirm-modal h2{font-size:8px;color:var(--red);margin-bottom:8px}
+.confirm-modal p{font-family:'VT323',monospace;font-size:16px;color:#ccc;margin-bottom:12px}
 .confirm-row{display:flex;gap:8px;justify-content:center}
-.confirm-yes{background:var(--red);color:#fff;border:none;font-family:'Press Start 2P',monospace;font-size:6px;padding:9px 16px;cursor:pointer;border-bottom:3px solid #7a0000;border-right:3px solid #7a0000}
-.confirm-no{background:var(--panel);color:var(--gray);border:2px solid var(--gray);font-family:'Press Start 2P',monospace;font-size:6px;padding:9px 16px;cursor:pointer}
+.confirm-yes{background:var(--red);color:#fff;font-family:'Press Start 2P',monospace;font-size:6px;border:none;padding:9px 14px;cursor:pointer;border-bottom:3px solid #900;border-right:3px solid #900}
+.confirm-no{background:var(--panel);color:#aaa;font-family:'Press Start 2P',monospace;font-size:6px;border:2px solid #444;padding:9px 14px;cursor:pointer}
+.confirm-modal.show{display:block}
+#confirm-modal{display:none}
+#confirm-modal.show{display:flex}
 
-/* EXPLOSION PARTICLES */
-.particle{position:fixed;pointer-events:none;z-index:9998;font-size:16px;animation:fly var(--dur) forwards}
-@keyframes fly{
-  0%{transform:translate(0,0) scale(1) rotate(0deg);opacity:1}
-  100%{transform:translate(var(--tx),var(--ty)) scale(0) rotate(var(--rot));opacity:0}
-}
-.star-flash{position:fixed;inset:0;pointer-events:none;z-index:9990;animation:flash .4s steps(3) forwards}
-@keyframes flash{0%{background:rgba(255,255,100,.15)}50%{background:rgba(255,255,100,.3)}100%{background:transparent}}
+/* STAR FLASH */
+.star-flash{position:fixed;inset:0;background:rgba(255,220,50,.15);z-index:1000;pointer-events:none;animation:flashFade .4s steps(4) forwards}
+@keyframes flashFade{from{opacity:1}to{opacity:0}}
 
-/* XP POPUP */
-.xp-pop{position:fixed;font-family:'Press Start 2P',monospace;font-size:9px;color:var(--yellow);text-shadow:2px 2px 0 #7a6000;pointer-events:none;z-index:9998;animation:xppop 1.3s forwards}
-@keyframes xppop{0%{transform:translateY(0) scale(.5);opacity:1}60%{transform:translateY(-55px) scale(1.3);opacity:1}100%{transform:translateY(-90px) scale(1);opacity:0}}
+/* SHOP/HERO legacy (kept for compatibility) */
+.equipped-lbl,.owned-lbl,.locked-lbl{font-family:'VT323',monospace;font-size:12px;padding:3px 6px}
+.equipped-lbl{color:var(--cyan)}
+.owned-lbl{color:var(--green)}
+.locked-lbl{color:#444}
 
-/* SCROLLBAR */
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:#111}
-::-webkit-scrollbar-thumb{background:#333}
+/* MISC */
+.orin-col{color:var(--orin)}
+.wife-col{color:var(--wife)}
+.sec-hdr{font-size:7px;color:var(--cyan);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-hdr::after{content:'';flex:1;height:2px;background:var(--border)}
+
 </style>
+<!-- FIREBASE SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyBHKkUx-rcghW5LQt5CX2ZWzcpKl53ZZjc",
+    authDomain: "quest-list-60b96.firebaseapp.com",
+    databaseURL: "https://quest-list-60b96-default-rtdb.firebaseio.com",
+    projectId: "quest-list-60b96",
+    storageBucket: "quest-list-60b96.firebasestorage.app",
+    messagingSenderId: "35485000332",
+    appId: "1:35485000332:web:59aa2dae39f144976651a9"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const stateRef = ref(db, "questlist/state");
+  window._fbSet = (data) => set(stateRef, data);
+  window._fbOnValue = (cb) => onValue(stateRef, cb);
+</script>
 </head>
 <body>
+<div style="position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.1) 3px,rgba(0,0,0,0.1) 4px);pointer-events:none;z-index:9999"></div>
 
-<!-- HEADER -->
-<header class="hdr">
+<div class="hdr">
   <button class="hdr-btn" onclick="undo()">↩ UNDO</button>
   <div class="hdr-title">⚔️ QUEST LIST ⚔️</div>
-  <div style="width:56px"></div>
-</header>
+  <button class="hdr-btn" onclick="showScreen('quests')">MENU</button>
+</div>
 
-<!-- XP PANEL -->
 <div class="xp-panel">
   <div class="xp-player">
     <div class="xp-label">
-      <span style="color:var(--orin)">🗡️ ORIN</span>
+      <span style="color:var(--orin)">⚔️ ORIN</span>
       <span id="orin-xp-lbl" style="color:#aaa">LVL 1</span>
     </div>
     <div class="xp-bar-bg"><div class="xp-bar-fill" id="orin-bar" style="background:var(--orin);width:0%"></div></div>
-    <div class="coins-row">🪙 <span id="orin-coins-top">0</span></div>
   </div>
   <div class="xp-player">
     <div class="xp-label">
-      <span style="color:var(--wife)">🔮 WIFE</span>
+      <span style="color:var(--wife)">👑 WIFE</span>
       <span id="wife-xp-lbl" style="color:#aaa">LVL 1</span>
     </div>
     <div class="xp-bar-bg"><div class="xp-bar-fill" id="wife-bar" style="background:var(--wife);width:0%"></div></div>
-    <div class="coins-row">🪙 <span id="wife-coins-top">0</span></div>
   </div>
 </div>
 
-<!-- NAV -->
 <nav class="nav">
-  <button class="nav-btn active" onclick="showScreen('quests')" data-sc="quests"><span class="ni">📋</span>QUESTS</button>
+  <button class="nav-btn active" onclick="showScreen('quests')" data-sc="quests"><span class="ni">⚔️</span>QUESTS</button>
   <button class="nav-btn" onclick="showScreen('add')" data-sc="add"><span class="ni">➕</span>ADD</button>
   <button class="nav-btn" onclick="showScreen('calendar')" data-sc="calendar"><span class="ni">📅</span>CAL</button>
-  <button class="nav-btn" onclick="showScreen('hero')" data-sc="hero"><span class="ni">🧙</span>HEROES</button>
+  <button class="nav-btn" onclick="showScreen('hero')" data-sc="hero"><span class="ni">🛡️</span>BATTLE</button>
 </nav>
 
 <div class="main">
-
 <!-- ===== QUESTS ===== -->
 <div id="sc-quests" class="screen active">
   <div class="day-nav">
@@ -391,66 +430,43 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <ul id="cal-task-list" style="list-style:none"></ul>
 </div>
 
-<!-- ===== HERO ===== -->
+<!-- ===== BATTLE ===== -->
 <div id="sc-hero" class="screen">
-  <div class="sec-hdr">HEROES</div>
-
-  <!-- Arena -->
-  <div class="hero-arena" id="hero-arena" data-scene-label="HOMETOWN PLAINS">
-    <div class="hero-card">
-      <div class="hero-stage" id="orin-stage">
-        <div class="pixel-hero" id="orin-pixel-hero">
-          <div class="ph-layer ph-body" id="orin-body"></div>
-          <div class="ph-layer ph-armor" id="orin-armor-layer"></div>
-          <div class="ph-layer ph-weapon" id="orin-weapon-layer"></div>
-          <div class="ph-layer ph-class-fx" id="orin-class-fx"></div>
-          <div class="ph-layer ph-shadow"></div>
+  <div class="battle-screen-wrap">
+    <div id="battle-canvas-wrap">
+      <canvas id="battle-canvas"></canvas>
+      <div class="boss-hud">
+        <div class="boss-name-row">
+          <span class="boss-name-lbl" id="boss-name-lbl">LOADING...</span>
+          <span class="boss-hp-txt" id="boss-hp-txt"></span>
+        </div>
+        <div class="boss-hp-bg"><div class="boss-hp-fill" id="boss-hp-fill" style="width:100%"></div></div>
+        <div class="boss-tier-badge" id="boss-tier-badge"></div>
+      </div>
+      <div class="hero-hud">
+        <div class="hero-hud-half">
+          <div class="hhc-name orin">⚔ ORIN</div>
+          <div class="hhc-class" id="orin-class-lbl">VILLAGER</div>
+          <div class="hhc-xp-bg"><div class="hhc-xp-fill orin" id="orin-xp-hud" style="width:0%"></div></div>
+          <div class="hhc-lvl" id="orin-lvl-hud">LVL 1</div>
+        </div>
+        <div class="power-hud">
+          <div class="power-label">PWR</div>
+          <div class="power-bg"><div class="power-fill" id="power-fill" style="width:0%"></div></div>
+        </div>
+        <div class="hero-hud-half right-hud">
+          <div class="hhc-name wife">WIFE ♛</div>
+          <div class="hhc-class" id="wife-class-lbl">PEASANT GIRL</div>
+          <div class="hhc-xp-bg"><div class="hhc-xp-fill wife" id="wife-xp-hud" style="width:0%"></div></div>
+          <div class="hhc-lvl" id="wife-lvl-hud">LVL 1</div>
         </div>
       </div>
-      <div class="hero-name orin">ORIN</div>
-      <div class="hero-title" id="orin-title">LEVEL 1 PEASANT</div>
-      <div class="hero-equip-row" id="orin-equip-row"></div>
-      <div class="hero-stats" id="orin-hstats">ATK:1 DEF:0 SPD:1</div>
-      <div class="hero-coins-badge">🪙 <span id="orin-coins-hero">0</span></div>
-    </div>
-    <div class="hero-vs">
-      <span style="font-size:16px">⚔️</span>
-      <span>VS</span>
-      <span style="font-size:16px">🔮</span>
-    </div>
-    <div class="hero-card">
-      <div class="hero-stage" id="wife-stage">
-        <div class="pixel-hero" id="wife-pixel-hero">
-          <div class="ph-layer ph-body" id="wife-body"></div>
-          <div class="ph-layer ph-armor" id="wife-armor-layer"></div>
-          <div class="ph-layer ph-weapon" id="wife-weapon-layer"></div>
-          <div class="ph-layer ph-class-fx" id="wife-class-fx"></div>
-          <div class="ph-layer ph-shadow"></div>
-        </div>
-      </div>
-      <div class="hero-name wife">WIFE</div>
-      <div class="hero-title" id="wife-title">LEVEL 1 PEASANT</div>
-      <div class="hero-equip-row" id="wife-equip-row"></div>
-      <div class="hero-stats" id="wife-hstats">ATK:1 DEF:0 SPD:1</div>
-      <div class="hero-coins-badge">🪙 <span id="wife-coins-hero">0</span></div>
     </div>
   </div>
-
-  <!-- Shop Tabs -->
-  <div class="shop-tabs" id="shop-tabs">
-    <button class="shop-tab active" onclick="setShopTab('orin-weapons',this)">🗡️ ORIN WEAPONS</button>
-    <button class="shop-tab" onclick="setShopTab('orin-armor',this)">🛡️ ORIN ARMOR</button>
-    <button class="shop-tab" onclick="setShopTab('orin-class',this)">⚡ ORIN CLASS</button>
-    <button class="shop-tab" onclick="setShopTab('wife-weapons',this)">🪄 WIFE WEAPONS</button>
-    <button class="shop-tab" onclick="setShopTab('wife-armor',this)">✨ WIFE ARMOR</button>
-    <button class="shop-tab" onclick="setShopTab('wife-class',this)">🌟 WIFE CLASS</button>
-    <button class="shop-tab" onclick="setShopTab('backgrounds',this)">🏞️ SCENES</button>
-    <button class="shop-tab" onclick="setShopTab('perks',this)">💎 PERKS</button>
-  </div>
-  <div class="shop-grid" id="shop-grid"></div>
 </div>
 
 </div><!-- /main -->
+</div><!-- /main-wrapper -->
 
 <!-- LEVEL UP MODAL -->
 <div class="modal-ov" id="lvl-modal" onclick="closeLvlModal()">
@@ -486,188 +502,180 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
 </div>
 
+
+<!-- CLASS CHANGE OVERLAY -->
+<div class="class-change-overlay" id="class-change-overlay">
+  <div class="cc-stars">★ ★ ★</div>
+  <div class="cc-eyecatch">✦ CLASS CHANGE! ✦</div>
+  <canvas class="cc-canvas" id="cc-canvas" width="96" height="96"></canvas>
+  <div class="cc-hero-name" id="cc-hero-name">ORIN</div>
+  <div class="cc-class-name" id="cc-class-name">FIGHTER</div>
+  <button class="cc-btn" onclick="closeClassChange()">OUTSTANDING! ⚔</button>
+</div>
+
+<!-- BOSS INTRO OVERLAY -->
+<div class="boss-intro-overlay" id="boss-intro-overlay">
+  <div class="bi-warning">⚠ BOSS APPROACHING ⚠</div>
+  <canvas id="bi-canvas" width="128" height="128"></canvas>
+  <div class="bi-name" id="bi-boss-name">???</div>
+  <div class="bi-tier" id="bi-boss-tier">MEGA BOSS</div>
+  <div class="bi-sub">Prepare for battle!</div>
+</div>
+
 <script>
-// =============================================
-// DATA & CONFIG
-// =============================================
+// ============================================================
+// CONFIG
+// ============================================================
 const XP_PER_TASK = 20;
 const XP_LEVELS   = [0,80,200,380,620,920,1300,1770,2340,3020,4000,5200,6600,8200,10000];
-const COINS_PER_LVL = 5;
 const DAYS_SHORT  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS      = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAYS_ABR    = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
-// Title progression (by level ranges)
-const ORIN_TITLES  = ['PEASANT','SQUIRE','FIGHTER','KNIGHT','CHAMPION','WARLORD','LEGEND','OVERLORD','DEMIGOD','TITAN','DEITY','ETERNAL'];
-const WIFE_TITLES  = ['PEASANT','APPRENTICE','MAGE','SORCERESS','ENCHANTRESS','ARCHMAGE','ORACLE','MYSTIC','SAGE','PROPHET','DIVINER','GODDESS'];
+// Class progressions — unlock by level
+const ORIN_CLASSES = [
+  {level:1,  name:'VILLAGER',  bodyColor:'#a0885a', accent:'#c8a870', weaponColor:'#8B5E3C', capeColor:null},
+  {level:4,  name:'FIGHTER',   bodyColor:'#b05030', accent:'#d07050', weaponColor:'#bbbbbb', capeColor:null},
+  {level:7,  name:'WARRIOR',   bodyColor:'#c03030', accent:'#e06060', weaponColor:'#dddddd', capeColor:'#802020'},
+  {level:10, name:'HERO',      bodyColor:'#3050d0', accent:'#5070ff', weaponColor:'#00e8e8', capeColor:'#202080'},
+  {level:13, name:'LEGEND',    bodyColor:'#b09000', accent:'#ffd700', weaponColor:'#ffd700', capeColor:'#806000'},
+  {level:16, name:'DEMIGOD',   bodyColor:'#8030c0', accent:'#c060ff', weaponColor:'#e060ff', capeColor:'#401060'},
+];
+const WIFE_CLASSES = [
+  {level:1,  name:'PEASANT GIRL', bodyColor:'#a06080', accent:'#c080a0', weaponColor:'#8B5E3C', crownColor:null},
+  {level:4,  name:'LADY',         bodyColor:'#b05090', accent:'#d070b0', weaponColor:'#cc88ff', crownColor:null},
+  {level:7,  name:'PRINCESS',     bodyColor:'#c030b0', accent:'#ff50e0', weaponColor:'#ff80ff', crownColor:'#ffd700'},
+  {level:10, name:'QUEEN',        bodyColor:'#b09000', accent:'#ffd700', weaponColor:'#ffd700', crownColor:'#ffd700'},
+  {level:13, name:'EMPRESS',      bodyColor:'#d03060', accent:'#ff5080', weaponColor:'#ff3050', crownColor:'#ff4060'},
+  {level:16, name:'GODDESS',      bodyColor:'#50b0f0', accent:'#90d0ff', weaponColor:'#ffffff', crownColor:'#ffffff'},
+];
 
-// ---- SHOP CATALOGUE ----
-const SHOP_CATALOGUE = {
-  'orin-weapons': [
-    {id:'o_w1', name:'WOODEN STICK',   icon:'🪵', desc:'Better than bare hands... barely.',  cost:3,  stat:'ATK+1', atk:1,def:0,spd:0, sprite:'🩲', spriteWith:'🩲', overlay:'🪵'},
-    {id:'o_w2', name:'IRON SWORD',     icon:'🗡️', desc:'A proper blade for a proper hero.',   cost:8,  stat:'ATK+3', atk:3,def:0,spd:0, req:'o_w1'},
-    {id:'o_w3', name:'BATTLE AXE',     icon:'🪓', desc:'Cleave through any obstacle.',         cost:15, stat:'ATK+5', atk:5,def:0,spd:-1,req:'o_w2'},
-    {id:'o_w4', name:'ENCHANTED BOW',  icon:'🏹', desc:'Strike enemies from afar.',            cost:22, stat:'ATK+4 SPD+2', atk:4,def:0,spd:2, req:'o_w3'},
-    {id:'o_w5', name:'DRAGON SLAYER',  icon:'⚔️', desc:'Forged in dragonfire. Pure legend.',  cost:40, stat:'ATK+10', atk:10,def:0,spd:0,req:'o_w4'},
-    {id:'o_w6', name:'EXCALIBUR',      icon:'🌟', desc:'THE legendary sword. Max power.',      cost:75, stat:'ATK+15 SPD+3', atk:15,def:0,spd:3,req:'o_w5'},
-  ],
-  'orin-armor': [
-    {id:'o_a1', name:'LEAF TUNIC',     icon:'🍃', desc:'At least you\'re not naked anymore.',  cost:4,  stat:'DEF+1', atk:0,def:1,spd:0},
-    {id:'o_a2', name:'LEATHER ARMOR',  icon:'🥋', desc:'Tanned hide, solid protection.',       cost:10, stat:'DEF+3', atk:0,def:3,spd:0, req:'o_a1'},
-    {id:'o_a3', name:'CHAIN MAIL',     icon:'🔗', desc:'Rings of steel, woven strong.',        cost:18, stat:'DEF+5', atk:0,def:5,spd:-1,req:'o_a2'},
-    {id:'o_a4', name:'KNIGHT PLATE',   icon:'🛡️', desc:'Heavy armour, nearly impenetrable.',   cost:30, stat:'DEF+8', atk:0,def:8,spd:-2,req:'o_a3'},
-    {id:'o_a5', name:'DRAGON SCALE',   icon:'🐉', desc:'Scales of an ancient dragon.',         cost:55, stat:'DEF+12 ATK+2', atk:2,def:12,spd:0,req:'o_a4'},
-  ],
-  'orin-class': [
-    {id:'o_c1', name:'SQUIRE UPGRADE',   icon:'🪖', desc:'Don the helmet, become a squire.',    cost:5,  stat:'ALL+1', atk:1,def:1,spd:1, sprite:'🧑', type:'class'},
-    {id:'o_c2', name:'WARRIOR CLASS',    icon:'💪', desc:'Body hardened, mind sharpened.',       cost:15, stat:'ATK+3 DEF+2', atk:3,def:2,spd:0, sprite:'🧔', type:'class', req:'o_c1'},
-    {id:'o_c3', name:'KNIGHT CLASS',     icon:'⚔️', desc:'Honour, duty, and a shiny horse.',    cost:30, stat:'ALL+4', atk:4,def:4,spd:2, sprite:'🤺', type:'class', req:'o_c2'},
-    {id:'o_c4', name:'PALADIN CLASS',    icon:'✝️', desc:'Holy warrior blessed by the gods.',   cost:55, stat:'ATK+6 DEF+6', atk:6,def:6,spd:0, sprite:'🛡️', type:'class', req:'o_c3'},
-    {id:'o_c5', name:'DARK LORD CLASS',  icon:'💀', desc:'Forsake the light. Embrace power.',   cost:80, stat:'ATK+15 DEF+5', atk:15,def:5,spd:5, sprite:'🦹‍♂️', type:'class', req:'o_c4'},
-  ],
-  'wife-weapons': [
-    {id:'w_w1', name:'TWIG WAND',      icon:'🌿', desc:'A twig with ambition.',                cost:3,  stat:'ATK+1', atk:1,def:0,spd:1},
-    {id:'w_w2', name:'CRYSTAL STAFF',  icon:'🔮', desc:'Channels raw magical energy.',         cost:9,  stat:'ATK+3 SPD+1', atk:3,def:0,spd:1, req:'w_w1'},
-    {id:'w_w3', name:'FIRE ORB',       icon:'🔥', desc:'Burns everything. Very effective.',     cost:16, stat:'ATK+5', atk:5,def:0,spd:0, req:'w_w2'},
-    {id:'w_w4', name:'LIGHTNING ROD',  icon:'⚡', desc:'Speed and power in one strike.',       cost:25, stat:'ATK+5 SPD+4', atk:5,def:0,spd:4, req:'w_w3'},
-    {id:'w_w5', name:'VOID SCEPTER',   icon:'🌑', desc:'Tears holes in reality itself.',       cost:45, stat:'ATK+12', atk:12,def:0,spd:2,req:'w_w4'},
-    {id:'w_w6', name:'COSMOS WAND',    icon:'🌌', desc:'Wields the power of entire galaxies.', cost:75, stat:'ATK+18 SPD+5', atk:18,def:0,spd:5,req:'w_w5'},
-  ],
-  'wife-armor': [
-    {id:'w_a1', name:'FAIRY ROBE',     icon:'🌸', desc:'Light as air, better than nothing.',   cost:4,  stat:'DEF+1 SPD+1', atk:0,def:1,spd:1},
-    {id:'w_a2', name:'SILK VESTMENT',  icon:'🧣', desc:'Woven from enchanted moonsilk.',       cost:10, stat:'DEF+3', atk:0,def:3,spd:0, req:'w_a1'},
-    {id:'w_a3', name:'MYSTIC CLOAK',   icon:'🌙', desc:'Shadows bend around the wearer.',      cost:20, stat:'DEF+5 SPD+2', atk:0,def:5,spd:2,req:'w_a2'},
-    {id:'w_a4', name:'ARCANE MAIL',    icon:'💫', desc:'Magic-woven armour, light and strong.',cost:32, stat:'DEF+7 ATK+2', atk:2,def:7,spd:0,req:'w_a3'},
-    {id:'w_a5', name:'CELESTIAL GOWN', icon:'🌟', desc:'Spun from starlight by the gods.',     cost:55, stat:'ALL+8', atk:5,def:8,spd:3,req:'w_a4'},
-  ],
-  'wife-class': [
-    {id:'w_c1', name:'APPRENTICE',     icon:'📚', desc:'Begin the path of magic.',             cost:5,  stat:'ALL+1', atk:1,def:1,spd:1, sprite:'👩', type:'class'},
-    {id:'w_c2', name:'MAGE CLASS',     icon:'🔮', desc:'Command fire, ice, and lightning.',    cost:15, stat:'ATK+3 SPD+2', atk:3,def:0,spd:2, sprite:'🧙‍♀️', type:'class', req:'w_c1'},
-    {id:'w_c3', name:'SORCERESS',      icon:'⭐', desc:'Ancient knowledge unlocked.',          cost:30, stat:'ATK+5 SPD+3', atk:5,def:2,spd:3, sprite:'🧝‍♀️', type:'class', req:'w_c2'},
-    {id:'w_c4', name:'HIGH WITCH',     icon:'🌙', desc:'True mastery over arcane forces.',    cost:55, stat:'ATK+8 DEF+5', atk:8,def:5,spd:2, sprite:'🧛‍♀️', type:'class', req:'w_c3'},
-    {id:'w_c5', name:'QUEEN OF MAGIC', icon:'👑', desc:'Absolute ruler of all magic.',        cost:80, stat:'ALL+12', atk:12,def:8,spd:8, sprite:'👸', type:'class', req:'w_c4'},
-  ],
-  'backgrounds': [
-    {id:'bg_plains',  name:'HOMETOWN PLAINS', icon:'🌿', desc:'Where every hero begins.',          cost:0,  bg:'linear-gradient(180deg,#0a1a0a 0%,#0d2a0d 60%,#0a1a0a 100%)', scene:'HOMETOWN PLAINS', isFree:true},
-    {id:'bg_castle',  name:'CASTLE GATES',    icon:'🏰', desc:'Stone walls, proud banners.',       cost:10, bg:'linear-gradient(180deg,#1a1020 0%,#2a1535 60%,#0d0d15 100%)', scene:'CASTLE GATES'},
-    {id:'bg_dungeon', name:'DARK DUNGEON',    icon:'🕯️', desc:'Torches flicker in the dark.',    cost:15, bg:'linear-gradient(180deg,#0d0d00 0%,#1a1500 60%,#0d0800 100%)', scene:'DARK DUNGEON'},
-    {id:'bg_volcano', name:'VOLCANO LAIR',    icon:'🌋', desc:'Lava flows. Very dramatic.',        cost:20, bg:'linear-gradient(180deg,#2a0500 0%,#3d0a00 60%,#1a0000 100%)', scene:'VOLCANO LAIR'},
-    {id:'bg_sky',     name:'SKY KINGDOM',     icon:'☁️', desc:'Battle above the clouds.',         cost:25, bg:'linear-gradient(180deg,#001a3a 0%,#002855 60%,#001020 100%)', scene:'SKY KINGDOM'},
-    {id:'bg_space',   name:'OUTER SPACE',     icon:'🌌', desc:'The final frontier of questing.',  cost:35, bg:'linear-gradient(180deg,#000005 0%,#050015 60%,#000000 100%)', scene:'OUTER SPACE'},
-    {id:'bg_heaven',  name:'DIVINE REALM',    icon:'✨', desc:'The gods themselves look on.',      cost:60, bg:'linear-gradient(180deg,#1a0030 0%,#2d0050 60%,#0d0020 100%)', scene:'DIVINE REALM'},
-  ],
-  'perks': [
-    {id:'p_xp1',  name:'XP BOOST I',      icon:'⬆️', desc:'Earn 25% more XP permanently.',      cost:20, type:'perk', effect:'xpBoost1'},
-    {id:'p_xp2',  name:'XP BOOST II',     icon:'⬆️', desc:'Earn 50% more XP permanently.',      cost:45, type:'perk', effect:'xpBoost2', req:'p_xp1'},
-    {id:'p_coin1',name:'COIN MAGNET I',   icon:'🧲', desc:'Earn +2 coins on every level up.',   cost:15, type:'perk', effect:'coinBoost1'},
-    {id:'p_coin2',name:'COIN MAGNET II',  icon:'🧲', desc:'Earn +5 coins on every level up.',   cost:35, type:'perk', effect:'coinBoost2', req:'p_coin1'},
-    {id:'p_boom', name:'MEGA EXPLOSION',  icon:'💥', desc:'Tasks explode with EXTRA drama.',     cost:10, type:'perk', effect:'megaBoom'},
-    {id:'p_rainbow',name:'RAINBOW MODE',  icon:'🌈', desc:'XP bars show rainbow colors.',       cost:25, type:'perk', effect:'rainbowMode'},
-    {id:'p_pets', name:'BATTLE PET 🐉',   icon:'🐲', desc:'A tiny dragon companion appears.',   cost:50, type:'perk', effect:'pet'},
-  ],
+function getHeroClass(player, level) {
+  const arr = player === 'orin' ? ORIN_CLASSES : WIFE_CLASSES;
+  let cls = arr[0];
+  for (const c of arr) { if (level >= c.level) cls = c; else break; }
+  return cls;
+}
+
+// Monsters
+const MONSTERS = [
+  // Tier 1 — regulars (early)
+  {name:'GOBLIN SCOUT',   hp:35,  xpGive:12, tier:'regular', bgKey:'plains',
+   bodyColor:'#3a6020', eyeColor:'#ffff00', accentColor:'#1a3a08', weaponColor:'#8B5E3C'},
+  {name:'RAT KING',       hp:50,  xpGive:16, tier:'regular', bgKey:'plains',
+   bodyColor:'#5a4030', eyeColor:'#ff0000', accentColor:'#3a2010', weaponColor:'#888888'},
+  {name:'CAVE TROLL',     hp:70,  xpGive:22, tier:'regular', bgKey:'dungeon',
+   bodyColor:'#507050', eyeColor:'#ff8800', accentColor:'#304030', weaponColor:'#aaaaaa'},
+  {name:'DARK IMP',       hp:90,  xpGive:28, tier:'regular', bgKey:'dungeon',
+   bodyColor:'#503060', eyeColor:'#ff00ff', accentColor:'#301840', weaponColor:'#666666'},
+  // Tier 2 — regulars (mid)
+  {name:'ORC WARRIOR',    hp:130, xpGive:40, tier:'regular', bgKey:'dungeon',
+   bodyColor:'#305020', eyeColor:'#ff8800', accentColor:'#183010', weaponColor:'#888888'},
+  {name:'BLOOD WOLF',     hp:160, xpGive:50, tier:'regular', bgKey:'volcano',
+   bodyColor:'#602020', eyeColor:'#ff0000', accentColor:'#401010', weaponColor:'#cc0000'},
+  {name:'DARK KNIGHT',    hp:200, xpGive:65, tier:'regular', bgKey:'castle',
+   bodyColor:'#282838', eyeColor:'#ff00ff', accentColor:'#101018', weaponColor:'#aaaaaa'},
+  // Mini-bosses
+  {name:'LICH',           hp:300, xpGive:90, tier:'miniboss', bgKey:'dungeon',
+   bodyColor:'#d0d0ff', eyeColor:'#0000ff', accentColor:'#8080cc', weaponColor:'#6600ff'},
+  {name:'DEMON GENERAL',  hp:420, xpGive:130,tier:'miniboss', bgKey:'volcano',
+   bodyColor:'#b02020', eyeColor:'#ffff00', accentColor:'#701010', weaponColor:'#ff8800'},
+  {name:'SHADOW DRAGON',  hp:560, xpGive:170,tier:'miniboss', bgKey:'castle',
+   bodyColor:'#202050', eyeColor:'#00ffff', accentColor:'#101030', weaponColor:'#00aaff'},
+  // Tier 3 — regulars (late)
+  {name:'WYVERN',         hp:280, xpGive:85, tier:'regular', bgKey:'volcano',
+   bodyColor:'#a05010', eyeColor:'#ff4400', accentColor:'#702008', weaponColor:'#ff8800'},
+  {name:'NECROMANCER',    hp:360, xpGive:110,tier:'regular', bgKey:'dungeon',
+   bodyColor:'#4030a0', eyeColor:'#00ffff', accentColor:'#201860', weaponColor:'#00aaff'},
+  // Mega-bosses
+  {name:'DRAGON GOD',     hp:800, xpGive:250,tier:'megaboss', bgKey:'volcano',
+   bodyColor:'#c00000', eyeColor:'#ffffff', accentColor:'#600000', weaponColor:'#ff8800'},
+  {name:'VOID EMPEROR',   hp:1000,xpGive:320,tier:'megaboss', bgKey:'void',
+   bodyColor:'#180030', eyeColor:'#00ffff', accentColor:'#0c0018', weaponColor:'#00ffff'},
+  {name:'THE ETERNAL KING',hp:1200,xpGive:400,tier:'megaboss',bgKey:'heaven',
+   bodyColor:'#c0a000', eyeColor:'#ffffff', accentColor:'#806000', weaponColor:'#ffffff'},
+];
+
+const BG_PALETTES = {
+  plains:  {skyTop:'#081520',skyBot:'#0d2a14',groundTop:'#0d2a0d',groundBot:'#081508',accent:'#1a3a1a'},
+  dungeon: {skyTop:'#0d0d00',skyBot:'#1a1500',groundTop:'#1a1200',groundBot:'#0d0900',accent:'#2a2000'},
+  castle:  {skyTop:'#100818',skyBot:'#1e0f2a',groundTop:'#160d20',groundBot:'#0d0815',accent:'#261535'},
+  volcano: {skyTop:'#200300',skyBot:'#350700',groundTop:'#180400',groundBot:'#100200',accent:'#300800'},
+  void:    {skyTop:'#000003',skyBot:'#040010',groundTop:'#040010',groundBot:'#020008',accent:'#0c0028'},
+  heaven:  {skyTop:'#120020',skyBot:'#200040',groundTop:'#160030',groundBot:'#0c0020',accent:'#280050'},
 };
 
-// =============================================
+// ============================================================
 // STATE
-// =============================================
+// ============================================================
 let state = {
-  tasks: [],
-  completions: {},
-  xp: {orin:0, wife:0},
-  coins: {orin:0, wife:0},
-  owned: ['bg_plains'],
-  equippedBg: 'bg_plains',
-  equippedWeapon: {orin:null, wife:null},
-  equippedArmor:  {orin:null, wife:null},
-  equippedClass:  {orin:null, wife:null},
-  perks: [],
-  heroStats: {
-    orin:{atk:1,def:0,spd:1},
-    wife:{atk:1,def:0,spd:1},
+  tasks:[], completions:{},
+  xp:{orin:0, wife:0},
+  battle:{
+    monsterId:0, monsterHp:35, monsterHpMax:35,
+    regularsKilled:0, totalKilled:0,
+    bgKey:'plains', powerCharge:0,
   },
 };
 
-let undoStack = [];
-let selAssign = 'orin';
-let selMode = 'anytime';
-let selDays = [];
+let undoStack=[], selAssign='orin', selMode='anytime', selDays=[];
 let calYear, calMonth, calSelected;
-let questFilter = 'all';
-let viewDateOffset = 0;  // 0=today, -1=yesterday, +1=tomorrow
-let shopTab = 'orin-weapons';
-let pendingDeleteId = null;
+let questFilter='all', viewDateOffset=0, pendingDeleteId=null;
 
-// =============================================
-// SAVE / LOAD (Firebase Realtime Database)
-// =============================================
-let _fbSaveTimeout = null;
-
-function save() {
-  // Debounce writes 400ms to avoid hammering Firebase on rapid clicks
+// ============================================================
+// FIREBASE SAVE / LOAD
+// ============================================================
+let _fbSaveTimeout=null;
+function save(){
   clearTimeout(_fbSaveTimeout);
-  _fbSaveTimeout = setTimeout(() => {
-    if (window._fbSet) window._fbSet(JSON.parse(JSON.stringify(state)));
-  }, 400);
+  _fbSaveTimeout=setTimeout(()=>{
+    if(window._fbSet) window._fbSet(JSON.parse(JSON.stringify(state)));
+  },400);
 }
-
-function fixState(s) {
-  if (!s.owned || !s.owned.includes('bg_plains')) { s.owned = s.owned||[]; s.owned.push('bg_plains'); }
-  if (!s.equippedWeapon) s.equippedWeapon = {orin:null, wife:null};
-  if (!s.equippedArmor)  s.equippedArmor  = {orin:null, wife:null};
-  if (!s.equippedClass)  s.equippedClass   = {orin:null, wife:null};
-  if (!s.perks)          s.perks = [];
-  if (!s.heroStats)      s.heroStats = {orin:{atk:1,def:0,spd:1}, wife:{atk:1,def:0,spd:1}};
-  if (!s.xp)             s.xp = {orin:0, wife:0};
-  if (!s.coins)          s.coins = {orin:0, wife:0};
-  if (!s.tasks)          s.tasks = [];
-  if (!s.completions)    s.completions = {};
+function fixState(s){
+  if(!s.xp)          s.xp={orin:0,wife:0};
+  if(!s.tasks)       s.tasks=[];
+  if(!s.completions) s.completions={};
+  if(!s.battle)      s.battle={monsterId:0,monsterHp:35,monsterHpMax:35,regularsKilled:0,totalKilled:0,bgKey:'plains',powerCharge:0};
+  if(s.battle.powerCharge===undefined)    s.battle.powerCharge=0;
+  if(s.battle.regularsKilled===undefined) s.battle.regularsKilled=0;
+  if(s.battle.totalKilled===undefined)    s.battle.totalKilled=0;
+  if(s.battle.bgKey===undefined)          s.battle.bgKey='plains';
   return s;
 }
-
-function loadState() {
-  // Poll until the Firebase module script has loaded and exposed _fbOnValue
-  const tryConnect = () => {
-    if (!window._fbOnValue) { setTimeout(tryConnect, 100); return; }
-    window._fbOnValue(snapshot => {
-      const data = snapshot.val();
-      if (data) {
-        state = fixState({...state, ...data});
-      } else {
-        // First run — no Firebase data yet, push defaults
-        state = fixState(state);
-        save();
-      }
+function loadState(){
+  const tryConnect=()=>{
+    if(!window._fbOnValue){setTimeout(tryConnect,100);return;}
+    window._fbOnValue(snapshot=>{
+      const data=snapshot.val();
+      if(data) state=fixState({...state,...data});
+      else{state=fixState(state);save();}
       renderAll();
+      startBattleLoop();
     });
   };
   tryConnect();
 }
 
-// =============================================
+// ============================================================
 // UNDO
-// =============================================
-function pushUndo() { undoStack.push(JSON.stringify(state)); if(undoStack.length>40) undoStack.shift(); }
-function undo() {
-  if (!undoStack.length) { toast('💭','NOTHING TO UNDO','No recent actions to reverse.'); return; }
-  state = JSON.parse(undoStack.pop());
-  save(); renderAll(); toast('↩️','UNDONE!','Last action reversed.');
+// ============================================================
+function pushUndo(){undoStack.push(JSON.stringify(state));if(undoStack.length>40)undoStack.shift();}
+function undo(){
+  if(!undoStack.length){toast('💭','NOTHING TO UNDO','No recent actions to reverse.');return;}
+  state=JSON.parse(undoStack.pop());
+  save();renderAll();toast('↩️','UNDONE!','Last action reversed.');
 }
 
-// =============================================
+// ============================================================
 // DATE HELPERS
-// =============================================
-function offsetDate(offset) {
-  const d=new Date(); d.setDate(d.getDate()+offset);
-  return fmtDate(d.getFullYear(),d.getMonth(),d.getDate());
-}
+// ============================================================
+function offsetDate(offset){const d=new Date();d.setDate(d.getDate()+offset);return fmtDate(d.getFullYear(),d.getMonth(),d.getDate());}
 function fmtDate(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 function parseDateStr(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
 function dayOfWeek(ds){return parseDateStr(ds).getDay()}
 function todayStr(){const d=new Date();return fmtDate(d.getFullYear(),d.getMonth(),d.getDate())}
-
 function viewDateStr(){return offsetDate(viewDateOffset)}
 function shiftDay(d){viewDateOffset+=d;renderQuestList()}
-
 function taskVisibleOnDate(task,dateStr){
   if(task.mode==='anytime') return true;
   if(task.mode==='date') return task.date===dateStr;
@@ -675,6 +683,777 @@ function taskVisibleOnDate(task,dateStr){
   return false;
 }
 function tasksDueOnDate(ds){return state.tasks.filter(t=>taskVisibleOnDate(t,ds))}
+
+// ============================================================
+// XP / LEVEL
+// ============================================================
+function getLevel(xp){for(let i=XP_LEVELS.length-1;i>=0;i--)if(xp>=XP_LEVELS[i])return i+1;return 1}
+function xpFloor(l){return XP_LEVELS[Math.min(l-1,XP_LEVELS.length-1)]}
+function xpCeil(l){return l>=XP_LEVELS.length?XP_LEVELS[XP_LEVELS.length-1]+9999:XP_LEVELS[l]}
+function xpMultiplier(){return 1;}
+
+function awardXP(player, el){
+  const amount=Math.round(XP_PER_TASK*xpMultiplier());
+  const prev=getLevel(state.xp[player]);
+  state.xp[player]+=amount;
+  const nxt=getLevel(state.xp[player]);
+  if(el) showXpPop(el,`+${amount}XP`);
+  if(nxt>prev) setTimeout(()=>showLvlModal(player,nxt,0),600);
+}
+function removeXP(player){
+  const amount=Math.round(XP_PER_TASK*xpMultiplier());
+  state.xp[player]=Math.max(0,state.xp[player]-amount);
+}
+
+function updateXPDisplay(){
+  ['orin','wife'].forEach(p=>{
+    const xp=state.xp[p],lvl=getLevel(xp);
+    const pct=Math.min(100,((xp-xpFloor(lvl))/(xpCeil(lvl)-xpFloor(lvl)))*100);
+    const bar=document.getElementById(`${p}-bar`);
+    if(bar){bar.style.background=p==='orin'?'#e84560':'#b44fde';bar.style.width=pct+'%';}
+    const lbl=document.getElementById(`${p}-xp-lbl`);
+    if(lbl) lbl.textContent=`LVL ${lvl} · ${xp}XP`;
+  });
+  updateHeroHUD();
+}
+
+function showXpPop(el,txt){
+  if(!el)return;
+  const pop=document.createElement('div');
+  pop.style.cssText='position:fixed;font-family:"Press Start 2P",monospace;font-size:9px;color:#f5c518;text-shadow:2px 2px 0 #000;pointer-events:none;z-index:1000;animation:dmgFloat .8s steps(6) forwards';
+  const r=el.getBoundingClientRect();
+  pop.style.left=(r.left+r.width/2-20)+'px';
+  pop.style.top=(r.top-10)+'px';
+  pop.textContent=txt;
+  document.body.appendChild(pop);
+  setTimeout(()=>pop.remove(),900);
+}
+
+// ============================================================
+// LEVEL UP MODAL
+// ============================================================
+function showLvlModal(player,lvl,coins){
+  document.getElementById('lvl-num').textContent=lvl;
+  document.getElementById('lvl-txt').textContent=`${player.toUpperCase()} reached level ${lvl}!`;
+  const coinEl=document.getElementById('lvl-coins');
+  if(coinEl) coinEl.textContent='';
+  document.getElementById('lvl-modal').classList.add('show');
+  // Check for class change
+  const cls=getHeroClass(player,lvl);
+  const prevCls=getHeroClass(player,lvl-1);
+  if(cls.name!==prevCls.name){
+    setTimeout(()=>{closeLvlModal();showClassChange(player,cls);},600);
+  }
+}
+function closeLvlModal(){document.getElementById('lvl-modal').classList.remove('show');}
+
+// ============================================================
+// CANVAS BATTLE ENGINE
+// ============================================================
+const LOGI_W=320, LOGI_H=240;
+let battleCanvas, battleCtx;
+let _battleRAF=null, _lastFrameTime=0;
+let _heroAnim={orin:{frame:0,timer:0},wife:{frame:0,timer:0}};
+let _bossAnim={frame:0,timer:0};
+let _shakeTimer=0;
+let _attackQueue=[];
+let _pendingDeath=false;
+let _bgScrollX=0;
+
+function initCanvas(){
+  battleCanvas=document.getElementById('battle-canvas');
+  if(!battleCanvas){ console.warn('battle-canvas not found'); return; }
+  battleCtx=battleCanvas.getContext('2d');
+  if(!battleCtx){ console.warn('2d context failed'); return; }
+  window.removeEventListener('resize',resizeCanvas);
+  window.addEventListener('resize',resizeCanvas);
+  resizeCanvas();
+}
+function resizeCanvas(){
+  if(!battleCanvas) return;
+  const wrap=document.getElementById('battle-canvas-wrap');
+  if(!wrap) return;
+  const w=wrap.clientWidth||window.innerWidth||320;
+  // Calculate available height = window minus hdr, xp-panel, nav
+  const hdr=document.querySelector('.hdr');
+  const xpPanel=document.querySelector('.xp-panel');
+  const nav=document.querySelector('.nav');
+  const usedH=(hdr?hdr.offsetHeight:40)+(xpPanel?xpPanel.offsetHeight:30)+(nav?nav.offsetHeight:50);
+  const h=Math.max(200, window.innerHeight - usedH);
+  wrap.style.height=h+'px';
+  battleCanvas.width=LOGI_W;
+  battleCanvas.height=LOGI_H;
+  battleCanvas.style.width=w+'px';
+  battleCanvas.style.height=h+'px';
+}
+
+// Pixel-art rect helper (logical coords → canvas pixels)
+function pr(ctx,x,y,w,h,col,S=2){
+  ctx.fillStyle=col;
+  ctx.fillRect(x*S,y*S,w*S,h*S);
+}
+
+// ── BACKGROUND ───────────────────────────────────────────────────────────────
+function drawBackground(ctx,bgKey,dt){
+  _bgScrollX=(_bgScrollX+dt*18)%(LOGI_W*2);
+  const pal=BG_PALETTES[bgKey]||BG_PALETTES.plains;
+  const W=LOGI_W,H=LOGI_H;
+
+  // Sky gradient
+  const grad=ctx.createLinearGradient(0,0,0,H*0.72);
+  grad.addColorStop(0,pal.skyTop);
+  grad.addColorStop(1,pal.skyBot);
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,W,Math.round(H*0.72));
+
+  // Stars for dark scenes
+  if(['void','heaven','castle','dungeon'].includes(bgKey)){
+    ctx.fillStyle='#ffffff';
+    for(let i=0;i<28;i++){
+      const sx=((i*53+Math.floor(_bgScrollX/5))%W);
+      const sy=(i*31+i*7)%75;
+      ctx.fillRect(sx,sy,i%4===0?2:1,i%4===0?2:1);
+    }
+  }
+
+  // Volcano lava glow
+  if(bgKey==='volcano'){
+    for(let i=0;i<4;i++){
+      const gx=((i*85+Math.floor(_bgScrollX/3))%W);
+      ctx.fillStyle=`rgba(255,${50+i*20},0,0.14)`;
+      ctx.beginPath();ctx.arc(gx,185,10+i*4,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  // Heaven glow
+  if(bgKey==='heaven'){
+    ctx.fillStyle='rgba(180,100,255,0.06)';
+    ctx.fillRect(0,60,W,80);
+  }
+
+  // Mid-ground scrolling (parallax ÷ 2)
+  const mgX=Math.floor(_bgScrollX/2);
+  if(bgKey==='plains'){
+    for(let i=0;i<5;i++){
+      const tx=((i*76+mgX)%(W+40))-20;
+      ctx.fillStyle='#3d2010';ctx.fillRect(tx+8,128,5,28);
+      ctx.fillStyle='#1a4a1a';ctx.fillRect(tx,108,22,28);
+      ctx.fillStyle='#2a6a2a';ctx.fillRect(tx+4,98,14,18);
+    }
+  } else if(bgKey==='dungeon'){
+    const now=Date.now();
+    for(let i=0;i<5;i++){
+      const tx=((i*65+mgX)%(W+20))-10;
+      ctx.fillStyle='#6a4020';ctx.fillRect(tx,122,4,14);
+      ctx.fillStyle=Math.sin(now/180+i)>0?'#ff8800':'#ffaa00';
+      ctx.fillRect(tx-2,114,8,10);
+      ctx.fillStyle='rgba(255,130,0,0.1)';ctx.fillRect(tx-8,106,18,22);
+    }
+  } else if(bgKey==='castle'){
+    for(let i=0;i<6;i++){
+      const tx=((i*56+mgX)%(W+20))-10;
+      ctx.fillStyle='#201830';ctx.fillRect(tx,98,10,60);
+      ctx.fillStyle='#160c22';ctx.fillRect(tx-2,90,14,12);
+      ctx.fillStyle='rgba(180,100,255,0.08)';ctx.fillRect(tx,90,10,8);
+    }
+  } else if(bgKey==='volcano'){
+    for(let i=0;i<3;i++){
+      const tx=((i*110+mgX)%(W+50))-25;
+      ctx.fillStyle='#2a0800';ctx.fillRect(tx,105,32,90);
+      ctx.fillStyle='#180400';ctx.fillRect(tx+6,98,20,16);
+    }
+  }
+
+  // Ground
+  const gY=Math.round(H*0.68);
+  const gGrad=ctx.createLinearGradient(0,gY,0,H);
+  gGrad.addColorStop(0,pal.groundTop);
+  gGrad.addColorStop(1,pal.groundBot);
+  ctx.fillStyle=gGrad;
+  ctx.fillRect(0,gY,W,H-gY);
+
+  // Ground edge
+  ctx.fillStyle=pal.accent;
+  ctx.fillRect(0,gY,W,2);
+
+  // Scrolling ground tiles (foreground, parallax ×1.6)
+  const fgX=Math.floor(_bgScrollX*1.6);
+  ctx.fillStyle=pal.accent;
+  for(let i=0;i<9;i++){
+    const tx=((i*40+fgX)%(W+40))-20;
+    ctx.fillRect(tx,gY+2,20,2);
+  }
+}
+
+// ── ORIN SPRITE ───────────────────────────────────────────────────────────────
+const SKIN='#f5c09a', SKIN_SH='#d4956a', HAIR_O='#3d1a00', HAIR_W='#e0a0c8', EY='#101028', WH='#ffffff';
+
+function drawOrin(ctx,cx,cy,cls,frame,S=2){
+  const C=cls.bodyColor,A=cls.accent,W=cls.weaponColor;
+  const bobY=(frame===1)?1:0;
+
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.fillRect((cx-11)*S,(cy+28)*S,22*S,3*S);
+
+  // Cape (hero+)
+  if(cls.capeColor){
+    pr(ctx,cx+4,cy+10+bobY,3,11,cls.capeColor,S);
+    pr(ctx,cx+3,cy+18+bobY,4,4,cls.capeColor,S);
+  }
+
+  // Sword (idle = held at side)
+  if(frame!==2){
+    pr(ctx,cx-8,cy+6+bobY,2,13,W,S);
+    pr(ctx,cx-10,cy+9+bobY,6,2,W,S);
+    pr(ctx,cx-8,cy+18+bobY,2,3,'#8B5E3C',S);
+  }
+
+  // Legs
+  pr(ctx,cx-5,cy+20+bobY,4,8,C,S);
+  pr(ctx,cx+1,cy+20+bobY,4,8,C,S);
+  // Boots
+  pr(ctx,cx-6,cy+27+bobY,5,3,A,S);
+  pr(ctx,cx+1,cy+27+bobY,5,3,A,S);
+
+  // Torso
+  pr(ctx,cx-6,cy+10+bobY,12,12,C,S);
+  pr(ctx,cx-4,cy+12+bobY,8,2,A,S); // belt
+
+  // Shield (warrior+)
+  if(cls.level>=7){
+    pr(ctx,cx-12,cy+10+bobY,2,11,'#6080a8',S);
+    pr(ctx,cx-14,cy+11+bobY,2,9,'#304864',S);
+  }
+
+  // Arms
+  pr(ctx,cx-8,cy+11+bobY,2,8,SKIN,S);
+  pr(ctx,cx+6,cy+11+bobY,2,8,SKIN,S);
+
+  // Neck
+  pr(ctx,cx-2,cy+8+bobY,4,3,SKIN,S);
+
+  // Head
+  pr(ctx,cx-5,cy+1+bobY,10,9,SKIN,S);
+  pr(ctx,cx-3,cy+6+bobY,2,2,SKIN_SH,S); // jaw shadow
+
+  // Hair
+  pr(ctx,cx-5,cy+bobY,10,3,HAIR_O,S);
+  pr(ctx,cx-5,cy+1+bobY,2,4,HAIR_O,S);
+  pr(ctx,cx+3,cy+1+bobY,2,3,HAIR_O,S);
+
+  // Eyes
+  pr(ctx,cx-3,cy+4+bobY,2,2,EY,S);
+  pr(ctx,cx+1,cy+4+bobY,2,2,EY,S);
+  if(frame!==3){
+    pr(ctx,cx-3,cy+4+bobY,1,1,WH,S);
+    pr(ctx,cx+1,cy+4+bobY,1,1,WH,S);
+  }
+
+  // Helmet (warrior+)
+  if(cls.level>=7){
+    pr(ctx,cx-5,cy-1+bobY,10,3,A,S);
+    pr(ctx,cx-6,cy+bobY,12,2,C,S);
+    if(cls.level>=13){pr(ctx,cx-1,cy-3+bobY,2,3,W,S);} // crest
+  }
+
+  // Attack pose — sword thrust forward
+  if(frame===2){
+    pr(ctx,cx+5,cy+6,2,15,W,S);
+    pr(ctx,cx+3,cy+7,7,2,W,S);
+    pr(ctx,cx+5,cy+20,2,3,'#8B5E3C',S);
+    // Slash arc
+    ctx.fillStyle='rgba(180,180,255,0.55)';
+    for(let i=0;i<4;i++) ctx.fillRect((cx+9+i*3)*S,(cy+4+i*2)*S,4,6);
+  }
+
+  // Hurt tint
+  if(frame===3){
+    ctx.fillStyle='rgba(255,0,0,0.28)';
+    ctx.fillRect((cx-8)*S,(cy)*S,16*S,30*S);
+  }
+
+  // Level badge glow for demigod
+  if(cls.level>=16){
+    ctx.fillStyle='rgba(200,100,255,0.12)';
+    ctx.beginPath();ctx.arc(cx*S,(cy+12)*S,18*S,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ── WIFE SPRITE ───────────────────────────────────────────────────────────────
+function drawWife(ctx,cx,cy,cls,frame,S=2){
+  const C=cls.bodyColor,A=cls.accent,W=cls.weaponColor;
+  const bobY=(frame===1)?1:0;
+
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.fillRect((cx-10)*S,(cy+28)*S,20*S,3*S);
+
+  // Staff / wand (right side, idle)
+  if(frame!==2){
+    pr(ctx,cx+7,cy+1+bobY,2,24,W,S);
+    pr(ctx,cx+5,cy+bobY,5,3,A,S);   // orb
+    pr(ctx,cx+6,cy-2+bobY,4,3,W,S); // orb tip
+    ctx.fillStyle='rgba(220,120,255,0.35)';
+    ctx.fillRect((cx+4)*S,(cy-3)*S,8*S,8*S);
+  }
+
+  // Dress skirt
+  pr(ctx,cx-7,cy+17+bobY,14,13,'#300050',S);
+  pr(ctx,cx-8,cy+20+bobY,16,4,C,S);
+  pr(ctx,cx-6,cy+18+bobY,12,2,A,S); // trim
+
+  // Dress bodice
+  pr(ctx,cx-5,cy+9+bobY,10,10,C,S);
+  pr(ctx,cx-4,cy+11+bobY,8,2,A,S);
+
+  // Arms
+  pr(ctx,cx-7,cy+10+bobY,2,8,SKIN,S);
+  pr(ctx,cx+5,cy+10+bobY,2,8,SKIN,S);
+
+  // Neck
+  pr(ctx,cx-2,cy+7+bobY,4,3,SKIN,S);
+
+  // Head
+  pr(ctx,cx-4,cy+1+bobY,9,9,SKIN,S);
+  pr(ctx,cx-2,cy+6+bobY,2,2,SKIN_SH,S);
+
+  // Hair
+  pr(ctx,cx-5,cy+bobY,11,3,HAIR_W,S);
+  pr(ctx,cx-5,cy+1+bobY,2,7,HAIR_W,S);
+  pr(ctx,cx+4,cy+1+bobY,2,6,HAIR_W,S);
+  pr(ctx,cx-3,cy+9+bobY,2,4,HAIR_W,S);
+
+  // Eyes
+  pr(ctx,cx-2,cy+4+bobY,2,2,EY,S);
+  pr(ctx,cx+1,cy+4+bobY,2,2,EY,S);
+  if(frame!==3){
+    pr(ctx,cx-2,cy+4+bobY,1,1,WH,S);
+    pr(ctx,cx+1,cy+4+bobY,1,1,'#ffccff',S);
+  }
+
+  // Crown (princess+)
+  if(cls.crownColor){
+    const cc=cls.crownColor;
+    pr(ctx,cx-5,cy-1+bobY,10,3,cc,S);
+    pr(ctx,cx-3,cy-4+bobY,2,3,cc,S);
+    pr(ctx,cx+1,cy-4+bobY,2,3,cc,S);
+    pr(ctx,cx-1,cy-5+bobY,2,5,cc,S);
+    // Jewel
+    pr(ctx,cx-1,cy-5+bobY,2,2,W,S);
+  }
+
+  // Attack — staff blast
+  if(frame===2){
+    pr(ctx,cx-9,cy+3,2,22,W,S);
+    pr(ctx,cx-10,cy+2,5,3,A,S);
+    ctx.fillStyle='rgba(200,80,255,0.55)';
+    for(let i=0;i<5;i++) ctx.fillRect((cx-14-i*4)*S,(cy+3+i*2)*S,6,6);
+  }
+
+  if(frame===3){
+    ctx.fillStyle='rgba(255,0,0,0.25)';
+    ctx.fillRect((cx-8)*S,(cy)*S,16*S,30*S);
+  }
+
+  // Goddess aura
+  if(cls.level>=16){
+    ctx.fillStyle='rgba(100,200,255,0.1)';
+    ctx.beginPath();ctx.arc(cx*S,(cy+12)*S,18*S,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ── MONSTER SPRITE ────────────────────────────────────────────────────────────
+function drawMonster(ctx,cx,cy,monster,frame,S=2){
+  const C=monster.bodyColor,E=monster.eyeColor,AC=monster.accentColor,W=monster.weaponColor;
+  const isMega=monster.tier==='megaboss', isMini=monster.tier==='miniboss';
+  const sc=isMega?1.5:isMini?1.2:1.0;
+  const bobY=(frame===1)?-1:0;
+
+  function r(x,y,w,h,col){
+    ctx.fillStyle=col;
+    ctx.fillRect(Math.round((cx+x*sc)*S),Math.round((cy+y*sc)*S),Math.max(1,Math.round(w*sc*S)),Math.max(1,Math.round(h*sc*S)));
+  }
+
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.fillRect(Math.round((cx-14*sc)*S),Math.round((cy+29*sc)*S),Math.round(28*sc*S),Math.round(4*sc*S));
+
+  // Mega aura
+  if(isMega){
+    ctx.fillStyle='rgba(200,0,0,0.07)';
+    for(let ri=0;ri<3;ri++){
+      ctx.beginPath();
+      ctx.arc(cx*S,(cy+12)*S,(22+ri*10)*sc*S,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // Body
+  r(-10,8+bobY,20,20,C);
+  r(-8,10+bobY,16,17,AC);
+
+  // Head
+  r(-9,-2+bobY,18,12,C);
+  r(-11,1+bobY,22,7,C);
+
+  // Horns
+  if(isMega||isMini){
+    r(-9,-11+bobY,4,10,AC);
+    r(5,-11+bobY,4,10,AC);
+    r(-10,-12+bobY,5,3,W);
+    r(5,-12+bobY,5,3,W);
+  } else {
+    r(-6,-7+bobY,3,6,AC);
+    r(3,-7+bobY,3,6,AC);
+  }
+
+  // Eyes
+  r(-5,0+bobY,5,5,E);
+  r(0,0+bobY,5,5,E);
+  r(-4,1+bobY,2,2,'#000');
+  r(2,1+bobY,2,2,'#000');
+  // Eye glow
+  ctx.fillStyle='rgba(255,255,0,0.4)';
+  ctx.fillRect(Math.round((cx-4*sc)*S),Math.round((cy+1*sc)*S),Math.round(2*sc*S),Math.round(2*sc*S));
+
+  // Arms / claws
+  r(-15,10+bobY,5,13,C);
+  r(10,10+bobY,5,13,C);
+  r(-17,19+bobY,5,5,AC);
+  r(12,19+bobY,5,5,AC);
+
+  // Legs
+  r(-9,26+bobY,7,6,C);
+  r(2,26+bobY,7,6,C);
+  r(-10,30+bobY,8,3,AC);
+  r(2,30+bobY,8,3,AC);
+
+  // Boss weapon (mini+)
+  if(!monster.tier==='regular'||isMini||isMega){
+    r(13,3+bobY,3,20,W);
+    r(10,2+bobY,8,3,W);
+  }
+
+  // Attack — lunge particles left
+  if(frame===2){
+    ctx.fillStyle='rgba(255,60,0,0.45)';
+    for(let i=0;i<5;i++) ctx.fillRect(Math.round((cx-18-i*5)*S),Math.round((cy+8+i*3)*S),7,7);
+  }
+
+  // Hurt flash
+  if(frame===3){
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    ctx.fillRect(Math.round((cx-14*sc)*S),Math.round((cy-12*sc)*S),Math.round(28*sc*S),Math.round(45*sc*S));
+  }
+}
+
+// ============================================================
+// BATTLE LOOP
+// ============================================================
+function startBattleLoop(){
+  if(_battleRAF) cancelAnimationFrame(_battleRAF);
+  _lastFrameTime=performance.now();
+  function loop(now){
+    _battleRAF=requestAnimationFrame(loop);
+    const dt=Math.min((now-_lastFrameTime)/1000,0.1);
+    _lastFrameTime=now;
+    const heroScr=document.getElementById('sc-hero');
+    if(!heroScr||!heroScr.classList.contains('active')) return;
+    if(!battleCtx){initCanvas();return;}
+    tickAnims(dt);
+    drawFrame(dt);
+    processQueue();
+  }
+  _battleRAF=requestAnimationFrame(loop);
+}
+
+function tickAnims(dt){
+  ['orin','wife'].forEach(p=>{
+    _heroAnim[p].timer+=dt;
+    if(_heroAnim[p].timer>0.5&&_heroAnim[p].frame<=1){
+      _heroAnim[p].frame=_heroAnim[p].frame===0?1:0;
+      _heroAnim[p].timer=0;
+    }
+  });
+  _bossAnim.timer+=dt;
+  if(_bossAnim.timer>0.65&&_bossAnim.frame<=1){
+    _bossAnim.frame=_bossAnim.frame===0?1:0;
+    _bossAnim.timer=0;
+  }
+  if(_shakeTimer>0) _shakeTimer-=dt;
+}
+
+function drawFrame(dt){
+  const ctx=battleCtx;
+  ctx.clearRect(0,0,LOGI_W,LOGI_H);
+  const bgKey=(state.battle&&state.battle.bgKey)||'plains';
+  drawBackground(ctx,bgKey,dt);
+
+  const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
+  const oCls=getHeroClass('orin',oLvl),wCls=getHeroClass('wife',wLvl);
+
+  // Positions (logical)
+  drawOrin(ctx,48,130,oCls,_heroAnim.orin.frame);
+  drawWife(ctx,82,135,wCls,_heroAnim.wife.frame);
+  if(state.battle&&state.battle.monsterId!==undefined){
+    const m=MONSTERS[state.battle.monsterId];
+    if(m) drawMonster(ctx,248,120,m,_bossAnim.frame);
+  }
+
+  if(_shakeTimer>0){
+    battleCanvas.style.transform=`translate(${Math.round(Math.random()*6-3)}px,${Math.round(Math.random()*4-2)}px)`;
+  } else {
+    battleCanvas.style.transform='';
+  }
+}
+
+function processQueue(){
+  const now=performance.now();
+  const ready=_attackQueue.filter(a=>a.ts<=now);
+  _attackQueue=_attackQueue.filter(a=>a.ts>now);
+  ready.forEach(atk=>{
+    // Hero attack frame
+    _heroAnim[atk.player].frame=2;
+    _heroAnim[atk.player].timer=-0.4;
+    setTimeout(()=>{_heroAnim[atk.player].frame=0;},420);
+    // Boss hurt
+    _bossAnim.frame=3;
+    _bossAnim.timer=-0.32;
+    setTimeout(()=>{_bossAnim.frame=0;},340);
+    _shakeTimer=0.28;
+    // Damage pop
+    showDmgPop(atk.damage,atk.isCrit,atk.player);
+    // Update HP
+    if(state.battle){
+      state.battle.monsterHp=Math.max(0,state.battle.monsterHp-atk.damage);
+      save();
+      updateBossHUD();
+      if(state.battle.monsterHp<=0&&!_pendingDeath){
+        _pendingDeath=true;
+        setTimeout(()=>onMonsterDeath(),520);
+      }
+    }
+  });
+}
+
+function showDmgPop(dmg,isCrit,player){
+  const wrap=document.getElementById('battle-canvas-wrap');
+  if(!wrap) return;
+  const pop=document.createElement('div');
+  pop.className='dmg-pop '+(isCrit?'crit':'normal')+' '+player+'-dmg';
+  pop.textContent=(isCrit?'CRIT! ':'')+dmg;
+  const W=wrap.clientWidth,H=wrap.clientHeight;
+  pop.style.left=Math.round(W*0.52+Math.random()*40-20)+'px';
+  pop.style.top= Math.round(H*0.3+Math.random()*20-10)+'px';
+  wrap.appendChild(pop);
+  setTimeout(()=>pop.remove(),1050);
+}
+
+// ============================================================
+// ATTACK TRIGGER (called on quest completion)
+// ============================================================
+function triggerAttack(player,_xp){
+  const lvl=getLevel(state.xp[player]);
+  const base=Math.max(1,lvl*2+(lvl>4?Math.floor(lvl/2):0));
+  const isCrit=Math.random()<0.15;
+  let dmg=base+Math.floor(Math.random()*(lvl+2));
+  if(isCrit) dmg=Math.floor(dmg*1.8);
+
+  if(state.battle){
+    state.battle.powerCharge=Math.min(100,(state.battle.powerCharge||0)+15);
+    save();
+    updatePowerBar();
+  }
+
+  const delay=player==='wife'?200:0;
+  _attackQueue.push({player,damage:dmg,isCrit,ts:performance.now()+delay});
+
+  // Navigate to battle screen to show the hit
+  showScreen('hero');
+}
+
+// ============================================================
+// MONSTER DEATH
+// ============================================================
+function onMonsterDeath(){
+  _pendingDeath=false;
+  const m=MONSTERS[state.battle.monsterId];
+  if(!m) return;
+
+  const wrap=document.getElementById('battle-canvas-wrap');
+  if(wrap){
+    wrap.classList.add('victory-flash');
+    setTimeout(()=>wrap.classList.remove('victory-flash'),750);
+    spawnParticles(wrap,14);
+  }
+
+  // Award XP
+  const xpGain=m.xpGive;
+  const prevO=getLevel(state.xp.orin),prevW=getLevel(state.xp.wife);
+  state.xp.orin+=xpGain;
+  state.xp.wife+=xpGain;
+  state.battle.regularsKilled=(state.battle.regularsKilled||0)+1;
+  state.battle.totalKilled=(state.battle.totalKilled||0)+1;
+  state.battle.powerCharge=Math.min(100,(state.battle.powerCharge||0)+20);
+
+  // Class change check
+  const newO=getLevel(state.xp.orin),newW=getLevel(state.xp.wife);
+  const changes=[];
+  if(getHeroClass('orin',newO).name!==getHeroClass('orin',prevO).name) changes.push({player:'orin',cls:getHeroClass('orin',newO)});
+  if(getHeroClass('wife',newW).name!==getHeroClass('wife',prevW).name) changes.push({player:'wife',cls:getHeroClass('wife',newW)});
+
+  spawnNextMonster();
+  save();
+  updateXPDisplay();
+  updateBossHUD();
+  updatePowerBar();
+
+  if(changes.length>0) setTimeout(()=>showClassChange(changes[0].player,changes[0].cls),900);
+}
+
+function spawnNextMonster(){
+  const killed=state.battle.regularsKilled||0;
+  const total=state.battle.totalKilled||0;
+  const avgLvl=(getLevel(state.xp.orin)+getLevel(state.xp.wife))/2;
+  let pool;
+
+  if(total>0&&total%9===0){
+    pool=MONSTERS.filter(m=>m.tier==='megaboss');
+  } else if(killed>0&&killed%3===0){
+    pool=MONSTERS.filter(m=>m.tier==='miniboss');
+  } else {
+    pool=MONSTERS.filter(m=>m.tier==='regular');
+    if(avgLvl<5)       pool=pool.slice(0,4);
+    else if(avgLvl<9)  pool=pool.slice(2,7);
+    else               pool=pool.slice(5);
+    if(!pool.length)   pool=MONSTERS.filter(m=>m.tier==='regular');
+  }
+
+  const next=pool[Math.floor(Math.random()*pool.length)];
+  const idx=MONSTERS.indexOf(next);
+  state.battle.monsterId=idx;
+  state.battle.monsterHp=next.hp;
+  state.battle.monsterHpMax=next.hp;
+  state.battle.bgKey=next.bgKey||'plains';
+
+  if(next.tier!=='regular') setTimeout(()=>showBossIntro(next),400);
+}
+
+// ============================================================
+// HUD UPDATES
+// ============================================================
+function updateBossHUD(){
+  if(!state.battle) return;
+  const m=MONSTERS[state.battle.monsterId];
+  if(!m) return;
+  const hp=state.battle.monsterHp,max=state.battle.monsterHpMax;
+  const pct=Math.max(0,hp/max*100);
+  const nEl=document.getElementById('boss-name-lbl');
+  const tEl=document.getElementById('boss-hp-txt');
+  const fEl=document.getElementById('boss-hp-fill');
+  const bEl=document.getElementById('boss-tier-badge');
+  if(nEl) nEl.textContent=m.name;
+  if(tEl) tEl.textContent=`${hp} / ${max}`;
+  if(fEl){fEl.style.width=pct+'%';fEl.className='boss-hp-fill'+(pct<25?' danger':'');}
+  if(bEl){const tl={regular:'',miniboss:'⚠ MINI-BOSS',megaboss:'💀 MEGA BOSS'};bEl.textContent=tl[m.tier]||'';}
+}
+
+function updatePowerBar(){
+  const f=document.getElementById('power-fill');
+  if(!f||!state.battle) return;
+  const p=state.battle.powerCharge||0;
+  f.style.width=p+'%';
+  f.className='power-fill'+(p>=100?' full':'');
+}
+
+function updateHeroHUD(){
+  ['orin','wife'].forEach(p=>{
+    const xp=state.xp[p],lvl=getLevel(xp);
+    const pct=Math.min(100,((xp-xpFloor(lvl))/(xpCeil(lvl)-xpFloor(lvl)))*100);
+    const hf=document.getElementById(`${p}-xp-hud`);
+    const cl=document.getElementById(`${p}-class-lbl`);
+    const ll=document.getElementById(`${p}-lvl-hud`);
+    if(hf) hf.style.width=pct+'%';
+    if(cl) cl.textContent=getHeroClass(p,lvl).name;
+    if(ll) ll.textContent='LVL '+lvl;
+  });
+}
+
+// ============================================================
+// CLASS CHANGE + BOSS INTRO
+// ============================================================
+function showClassChange(player,cls){
+  const ov=document.getElementById('class-change-overlay');
+  if(!ov) return;
+  const hn=document.getElementById('cc-hero-name');
+  const cn=document.getElementById('cc-class-name');
+  const cv=document.getElementById('cc-canvas');
+  if(hn){hn.className='cc-hero-name '+player;hn.textContent=player.toUpperCase();}
+  if(cn) cn.textContent=cls.name;
+  if(cv){
+    const c2=cv.getContext('2d');c2.clearRect(0,0,96,96);
+    if(player==='orin') drawOrin(c2,24,14,cls,0,3);
+    else drawWife(c2,24,14,cls,0,3);
+  }
+  spawnParticles(document.body,22);
+  ov.classList.add('show');
+}
+function closeClassChange(){
+  const ov=document.getElementById('class-change-overlay');
+  if(ov) ov.classList.remove('show');
+}
+
+function showBossIntro(monster){
+  const ov=document.getElementById('boss-intro-overlay');
+  if(!ov) return;
+  const nn=document.getElementById('bi-boss-name');
+  const tn=document.getElementById('bi-boss-tier');
+  const cv=document.getElementById('bi-canvas');
+  if(nn) nn.textContent=monster.name;
+  if(tn) tn.textContent=monster.tier==='megaboss'?'💀 MEGA BOSS':'⚠ MINI-BOSS';
+  if(cv){
+    const c2=cv.getContext('2d');c2.clearRect(0,0,128,128);
+    drawMonster(c2,64,85,monster,0,3);
+  }
+  ov.classList.add('show');
+  setTimeout(()=>ov.classList.remove('show'),3500);
+}
+
+// ============================================================
+// PARTICLES
+// ============================================================
+function spawnParticles(parent,count){
+  const em=['⭐','💥','✨','🌟','⚡','💫','🔥','★','◆','▲'];
+  for(let i=0;i<count;i++){
+    setTimeout(()=>{
+      const p=document.createElement('div');
+      p.className='particle';
+      const ang=Math.random()*360;
+      const dist=70+Math.random()*130;
+      p.style.setProperty('--tx',Math.cos(ang*Math.PI/180)*dist+'px');
+      p.style.setProperty('--ty',Math.sin(ang*Math.PI/180)*dist+'px');
+      p.style.left=(25+Math.random()*50)+'%';
+      p.style.top=(15+Math.random()*40)+'%';
+      p.textContent=em[Math.floor(Math.random()*em.length)];
+      parent.appendChild(p);
+      setTimeout(()=>p.remove(),950);
+    },i*45);
+  }
+}
+
+// ============================================================
+// renderBattle + showScreen + renderAll
+// ============================================================
+function renderBattle(){
+  if(!state.battle||state.battle.monsterId===undefined){
+    state.battle={monsterId:0,monsterHp:35,monsterHpMax:35,regularsKilled:0,totalKilled:0,bgKey:'plains',powerCharge:0};
+    save();
+  }
+  updateBossHUD();
+  updateHeroHUD();
+  updatePowerBar();
+}
 
 // =============================================
 // COMPLETION
@@ -694,556 +1473,19 @@ function getLevel(xp){for(let i=XP_LEVELS.length-1;i>=0;i--)if(xp>=XP_LEVELS[i])
 function xpFloor(l){return XP_LEVELS[Math.min(l-1,XP_LEVELS.length-1)]}
 function xpCeil(l){return l>=XP_LEVELS.length?XP_LEVELS[XP_LEVELS.length-1]+9999:XP_LEVELS[l]}
 
-function xpMultiplier(){
-  if(state.perks.includes('xpBoost2')) return 1.5;
-  if(state.perks.includes('xpBoost1')) return 1.25;
-  return 1;
-}
-function coinBonus(){
-  if(state.perks.includes('coinBoost2')) return 5;
-  if(state.perks.includes('coinBoost1')) return 2;
-  return 0;
-}
+// xpMultiplier defined above
 
-function awardXP(player, el) {
-  const amount = Math.round(XP_PER_TASK * xpMultiplier());
-  const prev = getLevel(state.xp[player]);
-  state.xp[player] += amount;
-  const nxt = getLevel(state.xp[player]);
-  if (el) showXpPop(el, `+${amount}XP`);
-  if (nxt > prev) {
-    const earned = (nxt-prev)*COINS_PER_LVL + coinBonus()*(nxt-prev);
-    state.coins[player] += earned;
-    setTimeout(()=>showLvlModal(player,nxt,earned),600);
-  }
-}
+// awardXP defined above
 function removeXP(player) {
   const amount = Math.round(XP_PER_TASK * xpMultiplier());
   state.xp[player]=Math.max(0,state.xp[player]-amount);
 }
 
-function updateXPDisplay(){
-  ['orin','wife'].forEach(p=>{
-    const xp=state.xp[p], lvl=getLevel(xp);
-    const pct=Math.min(100,((xp-xpFloor(lvl))/(xpCeil(lvl)-xpFloor(lvl)))*100);
-    const bar=document.getElementById(`${p}-bar`);
-    if(state.perks.includes('rainbowMode')){
-      bar.style.background='linear-gradient(90deg,#ff0080,#ff8c00,#f5c518,#00e676,#00cfcf,#b44fde)';
-      bar.style.backgroundSize='200%';
-    } else {
-      bar.style.background=p==='orin'?'var(--orin)':'var(--wife)';
-    }
-    bar.style.width=pct+'%';
-    document.getElementById(`${p}-xp-lbl`).textContent=`LVL ${lvl} · ${xp}XP`;
-    document.getElementById(`${p}-coins-top`).textContent=state.coins[p];
-    if(document.getElementById(`${p}-coins-hero`))document.getElementById(`${p}-coins-hero`).textContent=state.coins[p];
-  });
-}
+// updateXPDisplay defined above
 
 // =============================================
-// PIXEL HERO RENDERING
+// HERO STAGE RENDERING
 // =============================================
-
-// Each hero is drawn as stacked SVG layers rendered into divs via background-image.
-// Layers: body (skin+clothes base), armor overlay, weapon overlay, class FX overlay.
-
-const P = 4; // pixel size in px
-
-function px(col, row, color) {
-  // Returns a single box-shadow pixel entry: "Xpx Ypx 0 COLOR"
-  return `${col*P}px ${row*P}px 0 ${color}`;
-}
-
-// Build a box-shadow pixel grid from a 2D array of color strings ('' = transparent)
-function buildShadow(grid, ox=0, oy=0) {
-  const dots = [];
-  for(let r=0;r<grid.length;r++){
-    for(let c=0;c<grid[r].length;c++){
-      if(grid[r][c]) dots.push(`${(c+ox)*P}px ${(r+oy)*P}px 0 0px ${grid[r][c]}`);
-    }
-  }
-  return dots.join(',');
-}
-
-// Skin tones
-const SK = '#f5c08a'; // skin
-const SK2 = '#d4956a'; // skin shadow
-const HR_O = '#3d1a00'; // orin hair (dark brown)
-const HR_W = '#b37fcc'; // wife hair (purple)
-const EY = '#1a1a2e'; // eyes
-const WH = '#ffffff';
-
-// Base body grids — 10 wide x 20 tall, 1 unit = P px
-// Orin base (male, undershirt)
-function orinBaseGrid(skinCol, hairCol) {
-  const S=skinCol, H=hairCol, C='#c8c8d8', SH='#9090a0', BL='#3050c8', BD='#2040a0';
-  return [
-    // row 0-3: hair
-    ['','',H,H,H,H,H,H,'',''],
-    ['',H,H,H,H,H,H,H,H,''],
-    ['',H,S,S,S,S,S,S,H,''],
-    ['',H,S,S,S,S,S,S,H,''],
-    // row 4-5: face
-    ['',H,S,EY,S,S,EY,S,H,''],
-    ['',H,S,S,S,S,S,S,H,''],
-    // row 6: neck
-    ['','',S,S,S,S,S,S,'',''],
-    ['','',S,S,S,S,S,S,'',''],
-    // row 8-13: torso (shirt)
-    ['',C,C,C,C,C,C,C,C,''],
-    [C,C,C,C,C,C,C,C,C,C],
-    [C,C,C,SH,C,C,SH,C,C,C],
-    [C,C,C,SH,C,C,SH,C,C,C],
-    ['',C,C,C,C,C,C,C,C,''],
-    ['',C,C,C,C,C,C,C,C,''],
-    // row 14-15: belt
-    ['',BL,BL,BL,BL,BL,BL,BL,BL,''],
-    // row 15-19: legs (pants)
-    ['',BD,BD,'','',BD,BD,'','',''],
-    ['',BD,BD,'','',BD,BD,'','',''],
-    ['',BD,BD,'','',BD,BD,'','',''],
-    // row 18-19: boots
-    ['',BL,BL,'','',BL,BL,'','',''],
-    ['',BL,BL,'','',BL,BL,'','',''],
-  ];
-}
-
-function wifeBaseGrid(skinCol, hairCol) {
-  const S=skinCol, H=hairCol, R='#c030a0', RD='#901070', SK2='#e090d0', BD='#6020a0';
-  return [
-    // row 0-3: hair (longer)
-    ['',H,H,H,H,H,H,H,H,''],
-    [H,H,H,H,H,H,H,H,H,H],
-    ['',H,S,S,S,S,S,S,H,''],
-    ['',H,S,S,S,S,S,S,H,''],
-    // row 4-5: face
-    ['',H,S,EY,S,S,EY,S,H,''],
-    ['',H,S,S,S,S,S,S,H,''],
-    // row 6-7: neck + hair sides
-    [H,'',S,S,S,S,S,S,'',H],
-    [H,'',S,S,S,S,S,S,'',H],
-    // row 8-13: robe top
-    ['',R,R,R,R,R,R,R,R,''],
-    [R,R,SK2,R,R,R,R,SK2,R,R],
-    [R,R,SK2,R,R,R,R,SK2,R,R],
-    [R,R,R,R,R,R,R,R,R,R],
-    ['',R,R,R,R,R,R,R,R,''],
-    ['',RD,RD,RD,RD,RD,RD,RD,RD,''],
-    // row 14-19: skirt
-    ['',BD,BD,BD,BD,BD,BD,BD,BD,''],
-    [BD,BD,BD,BD,BD,BD,BD,BD,BD,BD],
-    [BD,BD,BD,BD,BD,BD,BD,BD,BD,BD],
-    ['',BD,BD,BD,BD,BD,BD,BD,BD,''],
-    // row 18-19: feet
-    ['','',S,S,'','',S,S,'',''],
-    ['','',S,S,'','',S,S,'',''],
-  ];
-}
-
-// Weapon overlays — drawn to the right/left of hero
-const WEAPON_OVERLAYS = {
-  // orin weapons — appear on right side
-  none_orin: null,
-  o_w1: { // wooden stick
-    grid:[['#8B5E3C'],['#8B5E3C'],['#8B5E3C'],['#8B5E3C'],['#8B5E3C'],['#5c3d1e']],
-    ox:9, oy:5
-  },
-  o_w2: { // iron sword
-    grid:[['#aaa'],['#aaa'],['#aaa'],['#aaa'],['#ccc'],['#888'],['#f5c518']],
-    ox:9, oy:4
-  },
-  o_w3: { // battle axe
-    grid:[['','#777'],['#888','#999'],['#888','#999'],['','#777'],['','#888'],['','#888']],
-    ox:8, oy:4
-  },
-  o_w4: { // enchanted bow
-    grid:[['','#8B5E3C'],['#c8a870','#8B5E3C'],['#c8a870','#8B5E3C'],['#c8a870','#8B5E3C'],['','#8B5E3C']],
-    ox:8, oy:4
-  },
-  o_w5: { // dragon slayer
-    grid:[['','#e84560'],['#ff6688','#c03050'],['#ff6688','#c03050'],['#ff6688','#c03050'],['','#e84560'],['','#f5c518'],['','#f5c518']],
-    ox:8, oy:3
-  },
-  o_w6: { // excalibur
-    grid:[['','#fff'],['#aef','#ddf'],['#aef','#ddf'],['#aef','#ddf'],['#aef','#ddf'],['','#ddf'],['','#f5c518'],['','#f5c518']],
-    ox:8, oy:2
-  },
-  // wife weapons — wand/staff on right
-  w_w1: {grid:[['#8B5E3C'],['#8B5E3C'],['#9f7a50'],['#8B5E3C']],ox:9,oy:6},
-  w_w2: {grid:[['#b44fde'],['#9933bb'],['#b44fde'],['#9933bb'],['#b44fde'],['#666']],ox:9,oy:3},
-  w_w3: {grid:[['#ff4400'],['#ff6600'],['#ff4400'],['#ffaa00'],['#888']],ox:9,oy:4},
-  w_w4: {grid:[['#f5c518'],['#fff'],['#f5c518'],['#fff'],['#f5c518'],['#aaa']],ox:9,oy:3},
-  w_w5: {grid:[['#220033'],['#440066'],['#220033'],['#440066'],['#220033'],['#333']],ox:9,oy:3},
-  w_w6: {grid:[['#00cfcf'],['#fff'],['#00cfcf'],['#fff'],['#00cfcf'],['#fff'],['#aaa']],ox:9,oy:2},
-};
-
-// Armor color overlays — recolor the torso region
-const ARMOR_OVERLAYS = {
-  // orin armors
-  o_a1: {torso:'#4a7a3a', shadow:'#2d5a20'}, // leaf tunic - green
-  o_a2: {torso:'#8B5E3C', shadow:'#5c3d1e'}, // leather - brown
-  o_a3: {torso:'#607080', shadow:'#405060'}, // chain - steel
-  o_a4: {torso:'#7090b0', shadow:'#506080'}, // knight plate - blue steel
-  o_a5: {torso:'#2d6040', shadow:'#1a3d28'}, // dragon scale - dark green
-  // wife armors — recolor robe
-  w_a1: {torso:'#e080d0', shadow:'#b050a0'}, // fairy robe - pink
-  w_a2: {torso:'#d4af8a', shadow:'#a07850'}, // silk - gold
-  w_a3: {torso:'#304070', shadow:'#202850'}, // mystic cloak - dark blue
-  w_a4: {torso:'#8040b0', shadow:'#502070'}, // arcane mail - purple
-  w_a5: {torso:'#f0d060', shadow:'#c0a030'}, // celestial - gold shimmer
-};
-
-// Class FX — aura/glow effects drawn as border pixels
-const CLASS_FX = {
-  o_c1:{color:'#888888',label:'SQUIRE'},
-  o_c2:{color:'#c87040',label:'WARRIOR'},
-  o_c3:{color:'#f5c518',label:'KNIGHT'},
-  o_c4:{color:'#ffffff',label:'PALADIN'},
-  o_c5:{color:'#e84560',label:'DARK LORD'},
-  w_c1:{color:'#8888cc',label:'APPRENTICE'},
-  w_c2:{color:'#b44fde',label:'MAGE'},
-  w_c3:{color:'#00e676',label:'SORCERESS'},
-  w_c4:{color:'#00cfcf',label:'HIGH WITCH'},
-  w_c5:{color:'#f5c518',label:'QUEEN'},
-};
-
-function renderPixelHero(player) {
-  const isOrin = player === 'orin';
-  const eqWeapon = state.equippedWeapon[player];
-  const eqArmor  = state.equippedArmor[player];
-  const eqClass  = state.equippedClass[player];
-
-  // --- BODY LAYER ---
-  const baseGrid = isOrin
-    ? orinBaseGrid(SK, isOrin ? HR_O : HR_W)
-    : wifeBaseGrid(SK, HR_W);
-
-  // Apply armor color to torso rows (8-13) if equipped
-  if(eqArmor && ARMOR_OVERLAYS[eqArmor]) {
-    const ao = ARMOR_OVERLAYS[eqArmor];
-    for(let r=8;r<=13;r++){
-      if(!baseGrid[r]) continue;
-      baseGrid[r] = baseGrid[r].map((cell,c)=>{
-        if(!cell || cell===EY) return cell;
-        // replace shirt/robe colors
-        if(isOrin && (cell==='#c8c8d8'||cell==='#9090a0')) return cell==='#9090a0'?ao.shadow:ao.torso;
-        if(!isOrin && (cell==='#c030a0'||cell==='#901070'||cell==='#e090d0')) return cell==='#901070'?ao.shadow:ao.torso;
-        return cell;
-      });
-    }
-  }
-
-  const bodyShadow = buildShadow(baseGrid, 0, 0);
-  const bodyEl = document.getElementById(`${player}-body`);
-  if(bodyEl) {
-    bodyEl.style.cssText = `position:absolute;inset:0;width:56px;height:88px;`;
-    // Use canvas to draw pixel grid
-    drawPixelCanvas(`${player}-body`, baseGrid, 56, 80);
-  }
-
-  // --- WEAPON LAYER ---
-  const weaponEl = document.getElementById(`${player}-weapon-layer`);
-  if(weaponEl) {
-    weaponEl.innerHTML = '';
-    if(eqWeapon && WEAPON_OVERLAYS[eqWeapon]) {
-      const wo = WEAPON_OVERLAYS[eqWeapon];
-      const cvs = document.createElement('canvas');
-      cvs.width=56; cvs.height=80; cvs.style.cssText='position:absolute;inset:0;image-rendering:pixelated';
-      const ctx=cvs.getContext('2d');
-      wo.grid.forEach((row,r)=>{ row.forEach((col,c)=>{ if(col){ctx.fillStyle=col;ctx.fillRect((wo.ox+c)*P,(wo.oy+r)*P,P,P);}}); });
-      weaponEl.appendChild(cvs);
-    }
-  }
-
-  // --- ARMOR EXTRA DETAILS (shield for orin plate) ---
-  const armorEl = document.getElementById(`${player}-armor-layer`);
-  if(armorEl) {
-    armorEl.innerHTML = '';
-    if(eqArmor) {
-      const cvs = document.createElement('canvas');
-      cvs.width=56; cvs.height=80; cvs.style.cssText='position:absolute;inset:0;image-rendering:pixelated';
-      const ctx=cvs.getContext('2d');
-      // Draw shoulder pads for heavy armor
-      if(['o_a3','o_a4','o_a5'].includes(eqArmor)) {
-        const sc = eqArmor==='o_a5'?'#3a7a50':eqArmor==='o_a4'?'#7090b0':'#607080';
-        // left shoulder
-        [[0,8],[0,9],[1,8],[1,9]].forEach(([c,r])=>{ctx.fillStyle=sc;ctx.fillRect(c*P,r*P,P,P);});
-        // right shoulder
-        [[9,8],[9,9],[8,8],[8,9]].forEach(([c,r])=>{ctx.fillStyle=sc;ctx.fillRect(c*P,r*P,P,P);});
-      }
-      // Helmet for knight/paladin/dark lord classes — draw on head row
-      if(eqClass && ['o_c3','o_c4','o_c5'].includes(eqClass)) {
-        const hc = eqClass==='o_c5'?'#1a0000':eqClass==='o_c4'?'#d0d0ff':'#c0a000';
-        for(let c=1;c<=8;c++){ctx.fillStyle=hc;ctx.fillRect(c*P,0,P,P);}
-        for(let c=2;c<=7;c++){ctx.fillStyle=hc;ctx.fillRect(c*P,P,P,P);}
-      }
-      if(['w_a3','w_a4','w_a5'].includes(eqArmor)) {
-        const sc = eqArmor==='w_a5'?'#c8a020':eqArmor==='w_a4'?'#8040b0':'#304070';
-        [[0,8],[1,8],[0,9],[1,9],[8,8],[9,8],[8,9],[9,9]].forEach(([c,r])=>{ctx.fillStyle=sc;ctx.fillRect(c*P,r*P,P,P);});
-      }
-      armorEl.appendChild(cvs);
-    }
-  }
-
-  // --- CLASS FX LAYER (aura glow) ---
-  const fxEl = document.getElementById(`${player}-class-fx`);
-  if(fxEl) {
-    fxEl.innerHTML = '';
-    if(eqClass && CLASS_FX[eqClass]) {
-      const fx = CLASS_FX[eqClass];
-      const cvs = document.createElement('canvas');
-      cvs.width=56; cvs.height=80; cvs.style.cssText='position:absolute;inset:0;image-rendering:pixelated;opacity:0.55';
-      const ctx=cvs.getContext('2d');
-      // Draw aura border around hero silhouette edges
-      ctx.fillStyle=fx.color;
-      // top aura
-      for(let c=1;c<=8;c++) ctx.fillRect(c*P,-P,P,P);
-      // left/right aura
-      for(let r=0;r<=19;r++){ctx.fillRect(-P,r*P,P,P);ctx.fillRect(10*P,r*P,P,P);}
-      // bottom aura
-      for(let c=1;c<=8;c++) ctx.fillRect(c*P,20*P,P,P);
-      fxEl.appendChild(cvs);
-    }
-  }
-
-  // Update equipped badges
-  renderEquipBadges(player);
-}
-
-function drawPixelCanvas(id, grid, w, h) {
-  const el = document.getElementById(id);
-  if(!el) return;
-  el.innerHTML='';
-  const cvs=document.createElement('canvas');
-  cvs.width=w; cvs.height=h;
-  cvs.style.cssText='position:absolute;top:0;left:0;image-rendering:pixelated';
-  const ctx=cvs.getContext('2d');
-  grid.forEach((row,r)=>{
-    row.forEach((col,c)=>{
-      if(col){ctx.fillStyle=col;ctx.fillRect(c*P,r*P,P,P);}
-    });
-  });
-  el.appendChild(cvs);
-}
-
-function renderEquipBadges(player) {
-  const row = document.getElementById(`${player}-equip-row`);
-  if(!row) return;
-  row.innerHTML='';
-  const slots = [
-    {key:'equippedWeapon', cats:['orin-weapons','wife-weapons'], label:'WPN', icon:'⚔️'},
-    {key:'equippedArmor',  cats:['orin-armor','wife-armor'],     label:'ARM', icon:'🛡️'},
-    {key:'equippedClass',  cats:['orin-class','wife-class'],     label:'CLS', icon:'⚡'},
-  ];
-  slots.forEach(slot=>{
-    const equippedId = state[slot.key][player];
-    if(equippedId) {
-      const allItems=[...Object.values(SHOP_CATALOGUE).flat()];
-      const item=allItems.find(i=>i.id===equippedId);
-      const badge=document.createElement('div');
-      badge.className='equip-badge';
-      badge.title=(item?item.name:equippedId);
-      badge.textContent=item?item.icon:slot.icon;
-      row.appendChild(badge);
-    } else {
-      const badge=document.createElement('div');
-      badge.className='equip-badge slot-empty';
-      badge.textContent=slot.label;
-      row.appendChild(badge);
-    }
-  });
-}
-
-function equipItem(itemId, player, slot) {
-  // slot = 'equippedWeapon' | 'equippedArmor' | 'equippedClass'
-  pushUndo();
-  if(state[slot][player]===itemId) {
-    state[slot][player]=null; // toggle off
-  } else {
-    state[slot][player]=itemId;
-  }
-  save();
-  renderPixelHero(player);
-  renderShop();
-}
-
-function getSlotForItem(item, shopTab) {
-  if(shopTab.includes('weapons')) return 'equippedWeapon';
-  if(shopTab.includes('armor'))   return 'equippedArmor';
-  if(shopTab.includes('class'))   return 'equippedClass';
-  return null;
-}
-
-function computeHeroStats(player) {
-  const cats = player==='orin'
-    ? ['orin-weapons','orin-armor','orin-class']
-    : ['wife-weapons','wife-armor','wife-class'];
-  let atk=1,def=0,spd=1;
-  cats.forEach(cat=>{
-    SHOP_CATALOGUE[cat].forEach(item=>{
-      if(state.owned.includes(item.id)){atk+=item.atk||0;def+=item.def||0;spd+=item.spd||0;}
-    });
-  });
-  return {atk,def,spd};
-}
-
-function computeTitle(player) {
-  const lvl=getLevel(state.xp[player]);
-  const titles=player==='orin'?ORIN_TITLES:WIFE_TITLES;
-  return `LEVEL ${lvl} ${titles[Math.min(lvl-1,titles.length-1)]}`;
-}
-
-function renderHeroDisplay(){
-  ['orin','wife'].forEach(p=>{
-    const stats=computeHeroStats(p);
-    const titleEl=document.getElementById(`${p}-title`);
-    if(titleEl)titleEl.textContent=computeTitle(p);
-    const statEl=document.getElementById(`${p}-hstats`);
-    if(statEl)statEl.textContent=`ATK:${stats.atk} DEF:${stats.def} SPD:${stats.spd}`;
-    renderPixelHero(p);
-  });
-
-  // Background
-  const bgItem=SHOP_CATALOGUE.backgrounds.find(b=>b.id===state.equippedBg);
-  const arena=document.getElementById('hero-arena');
-  if(arena&&bgItem){
-    arena.style.background=bgItem.bg;
-    arena.setAttribute('data-scene-label',bgItem.scene);
-  }
-
-  // Pet
-  const hasPet=state.perks.includes('pet');
-  let pet=document.getElementById('arena-pet');
-  if(hasPet&&!pet){
-    pet=document.createElement('div');
-    pet.id='arena-pet';
-    pet.style.cssText='position:absolute;bottom:32px;left:50%;transform:translateX(-50%);font-size:28px;animation:bob 1.5s steps(2) infinite;z-index:2';
-    pet.textContent='🐲';
-    arena.appendChild(pet);
-  } else if(!hasPet&&pet){
-    pet.remove();
-  }
-}
-
-// =============================================
-// SHOP
-// =============================================
-function setShopTab(tab, btn) {
-  shopTab = tab;
-  document.querySelectorAll('.shop-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderShop();
-}
-
-function renderShop(){
-  const grid=document.getElementById('shop-grid');
-  if(!grid) return;
-  grid.innerHTML='';
-  const items=SHOP_CATALOGUE[shopTab]||[];
-
-  items.forEach(item=>{
-    const owned=state.owned.includes(item.id);
-    const isEquippedBg=shopTab==='backgrounds'&&state.equippedBg===item.id;
-    const prereqMet=!item.req||state.owned.includes(item.req);
-    const player=item.player||(shopTab.startsWith('orin')?'orin':'wife');
-    const affordable=shopTab==='backgrounds'?(state.coins.orin+state.coins.wife>=item.cost):(state.coins[player]>=item.cost);
-    const slot=getSlotForItem(item,shopTab);
-    const isEquipped=slot&&state[slot][player]===item.id;
-
-    const div=document.createElement('div');
-    div.className='shop-item'+((!owned&&!prereqMet)?' locked':'');
-
-    let actionHtml='';
-    if(item.isFree&&owned&&isEquippedBg){
-      actionHtml=`<div class="equipped-lbl">✓ ACTIVE</div>`;
-    } else if(owned&&shopTab==='backgrounds'&&isEquippedBg){
-      actionHtml=`<div class="equipped-lbl">✓ ACTIVE</div>`;
-    } else if(owned&&shopTab==='backgrounds'){
-      actionHtml=`<button class="shop-btn" onclick="equipBg('${item.id}')">EQUIP</button>`;
-    } else if(owned&&slot){
-      // weapon/armor/class — show equip/unequip
-      if(isEquipped){
-        actionHtml=`<div class="equipped-lbl">✓ ON</div><button class="equip-btn active-equip" onclick="equipItem('${item.id}','${player}','${slot}')">UNEQUIP</button>`;
-      } else {
-        actionHtml=`<button class="equip-btn" onclick="equipItem('${item.id}','${player}','${slot}')">EQUIP</button>`;
-      }
-    } else if(owned){
-      actionHtml=`<div class="owned-lbl">✓ OWNED</div>`;
-    } else if(!prereqMet){
-      actionHtml=`<div class="locked-lbl">🔒 LOCKED</div>`;
-    } else if(item.isFree){
-      actionHtml=`<button class="shop-btn" onclick="buyItem('${item.id}')">FREE!</button>`;
-    } else {
-      actionHtml=`<button class="shop-btn" onclick="buyItem('${item.id}')" ${affordable?'':'disabled'}>${affordable?'BUY':'NEED 🪙'}</button>`;
-    }
-
-    const tagColor=player==='orin'?'var(--orin)':'var(--wife)';
-    const tagLabel=shopTab.startsWith('orin')?'🗡️ ORIN':shopTab.startsWith('wife')?'🔮 WIFE':shopTab==='backgrounds'?'🏞️ SHARED':'💎 PERK';
-
-    div.innerHTML=`
-      <div class="shop-icon-big">${item.icon}</div>
-      <div class="shop-body">
-        <div class="shop-iname">${item.name}</div>
-        <div class="shop-idesc">${item.desc}</div>
-        ${item.stat?`<div class="shop-itag" style="color:var(--green)">📈 ${item.stat}</div>`:''}
-        <div class="shop-itag" style="color:${tagColor}">${tagLabel}</div>
-      </div>
-      <div class="shop-right">
-        <div class="shop-cost">${item.isFree?'FREE':'🪙'+item.cost}</div>
-        ${actionHtml}
-      </div>`;
-    grid.appendChild(div);
-  });
-}
-
-function buyItem(id){
-  const allItems=[...Object.values(SHOP_CATALOGUE).flat()];
-  const item=allItems.find(i=>i.id===id);
-  if(!item||state.owned.includes(id)) return;
-
-  const player=item.player||(shopTab.startsWith('orin')?'orin':'wife');
-  const cost=item.cost;
-
-  if(shopTab==='backgrounds'){
-    const total=state.coins.orin+state.coins.wife;
-    if(total<cost){toast('💸','NOT ENOUGH COINS',`Need 🪙${cost} total between both players.`);return;}
-    pushUndo();
-    // Deduct from whoever has more
-    if(state.coins.orin>=cost){state.coins.orin-=cost;}
-    else{const rem=cost-state.coins.orin;state.coins.orin=0;state.coins.wife-=rem;}
-    state.owned.push(id);
-    state.equippedBg=id;
-  } else if(item.type==='perk'){
-    // perks: use combined coins
-    const total=state.coins.orin+state.coins.wife;
-    if(total<cost){toast('💸','NOT ENOUGH COINS',`Need 🪙${cost} combined.`);return;}
-    pushUndo();
-    if(state.coins.orin>=cost){state.coins.orin-=cost;}
-    else{const rem=cost-state.coins.orin;state.coins.orin=0;state.coins.wife-=rem;}
-    state.owned.push(id);
-    state.perks.push(item.effect);
-  } else {
-    if(state.coins[player]<cost){toast('💸','NOT ENOUGH COINS',`${player.toUpperCase()} needs 🪙${cost}.`);return;}
-    pushUndo();
-    state.coins[player]-=cost;
-    state.owned.push(id);
-    // Auto-equip the newly purchased item
-    const slot=getSlotForItem(item,shopTab);
-    if(slot) state[slot][player]=id;
-    // update hero stats
-    state.heroStats[player]=computeHeroStats(player);
-  }
-
-  save(); updateXPDisplay(); renderHeroDisplay(); renderShop();
-  toast('🎉','UPGRADE!',`${item.name} acquired!`);
-}
-
-function equipBg(id){
-  pushUndo();
-  state.equippedBg=id;
-  save(); renderHeroDisplay(); renderShop();
-}
-
 // =============================================
 // QUEST RENDERING
 // =============================================
@@ -1338,10 +1580,22 @@ function toggleComp(taskId, player, dateStr){
   const el=document.getElementById(`ti-${taskId}`);
 
   if(!wasFully&&nowFully){
-    // EXPLOSION!
     boom(el);
-    if(task.assign==='both'){awardXP('orin',el);awardXP('wife',el);}
-    else awardXP(task.assign,el);
+    if(task.assign==='both'){
+      awardXP('orin',el);awardXP('wife',el);
+      triggerAttack('orin',XP_PER_TASK);
+      setTimeout(()=>triggerAttack('wife',XP_PER_TASK),200);
+    } else {
+      awardXP(task.assign,el);
+      triggerAttack(task.assign,XP_PER_TASK);
+    }
+    if(task.mode==='anytime'){
+      setTimeout(()=>{
+        state.tasks=state.tasks.filter(t=>t.id!==taskId);
+        Object.keys(state.completions).forEach(k=>{if(k.startsWith(taskId+'_'))delete state.completions[k];});
+        save();
+      },550);
+    }
   } else if(wasFully&&!nowFully){
     if(task.assign==='both'){removeXP('orin');removeXP('wife');}
     else removeXP(task.assign);
@@ -1349,15 +1603,7 @@ function toggleComp(taskId, player, dateStr){
 
   updateXPDisplay();
   save();
-  // Re-render after boom delay
-  // If this is a Daily task and it just became fully done, permanently remove it
-  const removeAfterBoom = nowFully && task.mode==='anytime';
   setTimeout(()=>{
-    if(removeAfterBoom){
-      state.tasks=state.tasks.filter(t=>t.id!==taskId);
-      Object.keys(state.completions).forEach(k=>{if(k.startsWith(taskId+'_'))delete state.completions[k];});
-      save();
-    }
     renderQuestList();
     if(calSelected) renderCalDetail(calSelected);
   }, nowFully ? 600 : 0);
@@ -1381,7 +1627,7 @@ function boom(el){
   const rect=el.getBoundingClientRect();
   const cx=rect.left+rect.width/2;
   const cy=rect.top+rect.height/2;
-  const isMega=state.perks.includes('megaBoom');
+  const isMega=false;
   const count=isMega?20:12;
   const parts=isMega?PARTICLES_MEGA:PARTICLES;
 
@@ -1534,13 +1780,16 @@ function showScreen(name){
   document.querySelector(`[data-sc="${name}"]`).classList.add('active');
   if(name==='quests') renderQuestList();
   if(name==='calendar'){renderCal();if(calSelected)renderCalDetail(calSelected);}
-  if(name==='hero'){updateXPDisplay();renderHeroDisplay();renderShop();}
+  if(name==='hero'){
+    // Use setTimeout to ensure display:block has been applied
+    setTimeout(()=>{ initCanvas(); renderBattle(); }, 30);
+  }
 }
 
 function renderAll(){
   updateXPDisplay();
   renderQuestList();
-  if(document.getElementById('sc-hero').classList.contains('active')){renderHeroDisplay();renderShop();}
+  if(document.getElementById('sc-hero').classList.contains('active')) renderBattle();
   if(document.getElementById('sc-calendar').classList.contains('active')) renderCal();
 }
 
@@ -1552,11 +1801,11 @@ function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 initCal();
 const _td=new Date();
 document.getElementById('inp-date').value=`${_td.getFullYear()}-${String(_td.getMonth()+1).padStart(2,'0')}-${String(_td.getDate()).padStart(2,'0')}`;
-// loadState() connects to Firebase and calls renderAll() once data arrives
-loadState();
+loadState(); // connects Firebase, then calls renderAll() + startBattleLoop()
 
 let _lastT=0;
 document.addEventListener('touchend',e=>{const n=Date.now();if(n-_lastT<300)e.preventDefault();_lastT=n;},{passive:false});
+
 </script>
 </body>
 </html>
