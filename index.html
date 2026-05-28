@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="apple-touch-icon" href="icon.jpg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Quest List">
@@ -761,13 +760,17 @@ let _pendingDeath=false;
 let _bgScrollX=0;
 
 function initCanvas(){
-  battleCanvas=document.getElementById('battle-canvas');
-  if(!battleCanvas){ console.warn('battle-canvas not found'); return; }
+  const cvs=document.getElementById('battle-canvas');
+  if(!cvs) return;
+  battleCanvas=cvs;
   battleCtx=battleCanvas.getContext('2d');
-  if(!battleCtx){ console.warn('2d context failed'); return; }
+  if(!battleCtx) return;
   window.removeEventListener('resize',resizeCanvas);
   window.addEventListener('resize',resizeCanvas);
   resizeCanvas();
+  // Force immediate test draw so we know canvas is alive
+  battleCtx.fillStyle='#050510';
+  battleCtx.fillRect(0,0,LOGI_W,LOGI_H);
 }
 function resizeCanvas(){
   if(!battleCanvas) return;
@@ -839,9 +842,9 @@ function drawBackground(ctx,bgKey,dt){
   if(bgKey==='plains'){
     for(let i=0;i<5;i++){
       const tx=((i*76+mgX)%(W+40))-20;
-      ctx.fillStyle='#3d2010';ctx.fillRect(tx+8,Math.round(H*0.62),5,Math.round(H*0.12));
-      ctx.fillStyle='#1a4a1a';ctx.fillRect(tx,Math.round(H*0.50),22,Math.round(H*0.14));
-      ctx.fillStyle='#2a6a2a';ctx.fillRect(tx+4,Math.round(H*0.44),14,Math.round(H*0.09));
+      ctx.fillStyle='#3d2010';ctx.fillRect(tx+8,Math.round(H*0.72),5,Math.round(H*0.14));
+      ctx.fillStyle='#1a4a1a';ctx.fillRect(tx,Math.round(H*0.60),22,Math.round(H*0.15));
+      ctx.fillStyle='#2a6a2a';ctx.fillRect(tx+4,Math.round(H*0.54),14,Math.round(H*0.10));
     }
   } else if(bgKey==='dungeon'){
     const now=Date.now();
@@ -871,7 +874,7 @@ function drawBackground(ctx,bgKey,dt){
   }
 
   // Ground
-  const gY=Math.round(H*0.62);
+  const gY=Math.round(H*0.72);
   const gGrad=ctx.createLinearGradient(0,gY,0,H);
   gGrad.addColorStop(0,pal.groundTop);
   gGrad.addColorStop(1,pal.groundBot);
@@ -1160,13 +1163,18 @@ function drawMonster(ctx,cx,cy,monster,frame,S=2){
 function startBattleLoop(){
   if(_battleRAF) cancelAnimationFrame(_battleRAF);
   _lastFrameTime=performance.now();
+  // Pre-init canvas now in case hero tab is already active
+  setTimeout(initCanvas, 50);
   function loop(now){
     _battleRAF=requestAnimationFrame(loop);
     const dt=Math.min((now-_lastFrameTime)/1000,0.1);
     _lastFrameTime=now;
     const heroScr=document.getElementById('sc-hero');
     if(!heroScr||!heroScr.classList.contains('active')) return;
-    if(!battleCtx){initCanvas();return;}
+    if(!battleCtx||!battleCanvas||battleCanvas.width===0){
+      initCanvas();
+      return;
+    }
     tickAnims(dt);
     drawFrame(dt);
     processQueue();
@@ -1199,15 +1207,12 @@ function drawFrame(dt){
   const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
   const oCls=getHeroClass('orin',oLvl),wCls=getHeroClass('wife',wLvl);
 
-  // Positions (logical)
-  // Place sprites in upper portion of canvas, well above trees
-  const groundY=Math.round(LOGI_H*0.62);
-  const spriteY=Math.round(LOGI_H*0.22); // upper 22% — clearly visible
-  drawOrin(ctx,52,spriteY,oCls,_heroAnim.orin.frame);
-  drawWife(ctx,90,spriteY+5,wCls,_heroAnim.wife.frame);
+  // Fixed logical positions - heroes left, boss right, all in clear mid-upper area
+  drawOrin(ctx,44,55,oCls,_heroAnim.orin.frame);
+  drawWife(ctx,80,60,wCls,_heroAnim.wife.frame);
   if(state.battle&&state.battle.monsterId!==undefined){
     const m=MONSTERS[state.battle.monsterId];
-    if(m) drawMonster(ctx,240,spriteY-10,m,_bossAnim.frame);
+    if(m) drawMonster(ctx,238,45,m,_bossAnim.frame);
   }
 
   if(_shakeTimer>0){
@@ -1714,7 +1719,9 @@ function addTask(){
   });
   save();
   document.getElementById('inp-name').value='';
-  document.getElementById('inp-date').value='';
+  // Reset date input to today so it's ready for next quest
+  const _nd=new Date();
+  document.getElementById('inp-date').value=`${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
   selDays=[];
   document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('sel'));
   toast('⚔️','QUEST ADDED!',`"${name}" is now active!`);
@@ -1744,6 +1751,10 @@ function renderCal(){
 }
 function selectCalDay(ds){calSelected=ds;renderCal();renderCalDetail(ds);}
 function renderCalDetail(ds){
+  calSelected=ds;
+  // Sync date input to selected calendar date
+  const _di=document.getElementById('inp-date');
+  if(_di) _di.value=ds;
   const hdr=document.getElementById('cal-detail-hdr');
   const list=document.getElementById('cal-task-list');
   list.innerHTML='';
@@ -1791,8 +1802,13 @@ function showScreen(name){
   if(name==='quests') renderQuestList();
   if(name==='calendar'){renderCal();if(calSelected)renderCalDetail(calSelected);}
   if(name==='hero'){
-    // Use setTimeout to ensure display:block has been applied
-    setTimeout(()=>{ initCanvas(); renderBattle(); }, 30);
+    // Two timeouts: first lets display:block apply, second measures correct size
+    setTimeout(()=>{
+      initCanvas();
+      renderBattle();
+      // Second resize in case first was too early
+      setTimeout(resizeCanvas, 100);
+    }, 20);
   }
 }
 
@@ -1810,7 +1826,8 @@ function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 // =============================================
 initCal();
 const _td=new Date();
-document.getElementById('inp-date').value=`${_td.getFullYear()}-${String(_td.getMonth()+1).padStart(2,'0')}-${String(_td.getDate()).padStart(2,'0')}`;
+const _todayVal=`${_td.getFullYear()}-${String(_td.getMonth()+1).padStart(2,'0')}-${String(_td.getDate()).padStart(2,'0')}`;
+document.getElementById('inp-date').value=_todayVal;
 loadState(); // connects Firebase, then calls renderAll() + startBattleLoop()
 
 let _lastT=0;
