@@ -647,8 +647,17 @@ function loadState(){
     if(!window._fbOnValue){setTimeout(tryConnect,100);return;}
     window._fbOnValue(snapshot=>{
       const data=snapshot.val();
-      if(data) state=fixState({...state,...data});
-      else{state=fixState(state);save();}
+      if(data){
+        // Only merge known fields — ignore old shop/coin/owned fields
+        if(data.tasks)       state.tasks=data.tasks;
+        if(data.completions) state.completions=data.completions;
+        if(data.xp)          state.xp={...state.xp,...data.xp};
+        if(data.battle)      state.battle={...state.battle,...data.battle};
+        state=fixState(state);
+      } else {
+        state=fixState(state);
+        save();
+      }
       renderAll();
       startBattleLoop();
     });
@@ -677,10 +686,11 @@ function todayStr(){const d=new Date();return fmtDate(d.getFullYear(),d.getMonth
 function viewDateStr(){return offsetDate(viewDateOffset)}
 function shiftDay(d){viewDateOffset+=d;renderQuestList()}
 function taskVisibleOnDate(task,dateStr){
-  if(task.mode==='anytime') return true;
-  if(task.mode==='date') return task.date===dateStr;
-  if(task.mode==='recurring') return task.days.includes(dayOfWeek(dateStr));
-  return false;
+  const mode=task.mode||'anytime';
+  if(mode==='anytime') return true;
+  if(mode==='date') return task.date===dateStr;
+  if(mode==='recurring') return Array.isArray(task.days)&&task.days.includes(dayOfWeek(dateStr));
+  return true; // default show
 }
 function tasksDueOnDate(ds){return state.tasks.filter(t=>taskVisibleOnDate(t,ds))}
 
@@ -807,11 +817,11 @@ function drawBackground(ctx,bgKey,dt){
   const W=LOGI_W,H=LOGI_H;
 
   // Sky gradient
-  const grad=ctx.createLinearGradient(0,0,0,H*0.75);
+  const grad=ctx.createLinearGradient(0,0,0,H*0.76);
   grad.addColorStop(0,pal.skyTop);
   grad.addColorStop(1,pal.skyBot);
   ctx.fillStyle=grad;
-  ctx.fillRect(0,0,W,Math.round(H*0.75));
+  ctx.fillRect(0,0,W,Math.round(H*0.76));
 
   // Stars for dark scenes
   if(['void','heaven','castle','dungeon'].includes(bgKey)){
@@ -875,7 +885,7 @@ function drawBackground(ctx,bgKey,dt){
   }
 
   // Ground
-  const gY=Math.round(H*0.75);
+  const gY=Math.round(H*0.76);
   const gGrad=ctx.createLinearGradient(0,gY,0,H);
   gGrad.addColorStop(0,pal.groundTop);
   gGrad.addColorStop(1,pal.groundBot);
@@ -1082,7 +1092,13 @@ function drawMonster(ctx,cx,cy,monster,frame,S=2){
 
   function r(x,y,w,h,col){
     ctx.fillStyle=col;
-    ctx.fillRect(Math.round((cx+x*sc)*S),Math.round((cy+y*sc)*S),Math.max(1,Math.round(w*sc*S)),Math.max(1,Math.round(h*sc*S)));
+    const rx=Math.round((cx+x*sc)*S);
+    const ry=Math.round((cy+y*sc)*S);
+    const rw=Math.max(1,Math.round(w*sc*S));
+    const rh=Math.max(1,Math.round(h*sc*S));
+    // Clip to canvas
+    if(rx+rw<0||ry+rh<0||rx>LOGI_W*S||ry>LOGI_H*S) return;
+    ctx.fillRect(rx,ry,rw,rh);
   }
 
   // Shadow
@@ -1208,13 +1224,21 @@ function drawFrame(dt){
   const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
   const oCls=getHeroClass('orin',oLvl),wCls=getHeroClass('wife',wLvl);
 
-  // Sprites stand on ground (gY = LOGI_H*0.75 = 180, sprite feet at cy+30)
-  const gndY = Math.round(LOGI_H * 0.75) - 30;
-  drawOrin(ctx, 45, gndY, oCls, _heroAnim.orin.frame);
-  drawWife(ctx, 88, gndY + 3, wCls, _heroAnim.wife.frame);
+  // Ground Y at 75% of logical height
+  const gndY = Math.round(LOGI_H * 0.75) - 32;
+  // Heroes left side
+  drawOrin(ctx, 42, gndY, oCls, _heroAnim.orin.frame);
+  drawWife(ctx, 80, gndY + 2, wCls, _heroAnim.wife.frame);
+  // Monster right side — cap x so it stays in frame even when scaled up
   if(state.battle && state.battle.monsterId !== undefined){
     const m = MONSTERS[state.battle.monsterId];
-    if(m) drawMonster(ctx, 242, gndY - 10, m, _bossAnim.frame);
+    if(m){
+      const isMega=m.tier==='megaboss', isMini=m.tier==='miniboss';
+      const sc=isMega?1.5:isMini?1.2:1.0;
+      // Keep monster within canvas: rightmost pixel = (mx + 14*sc)*2 < LOGI_W*2
+      const mx = Math.min(225, Math.round(LOGI_W - 16*sc - 16));
+      drawMonster(ctx, mx, gndY - Math.round(8*sc), m, _bossAnim.frame);
+    }
   }
 
   if(_shakeTimer>0){
