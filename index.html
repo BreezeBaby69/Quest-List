@@ -529,6 +529,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 const XP_PER_TASK = 20;
 const XP_LEVELS   = [0,80,200,380,620,920,1300,1770,2340,3020,4000,5200,6600,8200,10000];
 const DAYS_SHORT  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS_ABR    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS      = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 // Class progressions — unlock by level
@@ -678,11 +679,14 @@ function undo(){
 // ============================================================
 // DATE HELPERS
 // ============================================================
-function offsetDate(offset){const d=new Date();d.setDate(d.getDate()+offset);return fmtDate(d.getFullYear(),d.getMonth(),d.getDate());}
+function offsetDate(offset){const n=new Date();const d=new Date(n.getFullYear(),n.getMonth(),n.getDate()+offset);return fmtDate(d.getFullYear(),d.getMonth(),d.getDate());}
 function fmtDate(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 function parseDateStr(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
 function dayOfWeek(ds){return parseDateStr(ds).getDay()}
-function todayStr(){const d=new Date();return fmtDate(d.getFullYear(),d.getMonth(),d.getDate())}
+function todayStr(){
+  const d=new Date();
+  return fmtDate(d.getFullYear(),d.getMonth(),d.getDate());
+}
 function viewDateStr(){return offsetDate(viewDateOffset)}
 function shiftDay(d){viewDateOffset+=d;renderQuestList()}
 function taskVisibleOnDate(task,dateStr){
@@ -1828,21 +1832,37 @@ function showScreen(name){
   if(name==='quests') renderQuestList();
   if(name==='calendar'){renderCal();if(calSelected)renderCalDetail(calSelected);}
   if(name==='hero'){
-    // Two timeouts: first lets display:block apply, second measures correct size
     setTimeout(()=>{
       initCanvas();
+      resizeCanvas();
       renderBattle();
-      // Second resize in case first was too early
-      setTimeout(resizeCanvas, 100);
-    }, 20);
+      // Force immediate first frame so screen is never black
+      if(battleCtx&&battleCanvas&&battleCanvas.width>0){
+        const bgKey=(state.battle&&state.battle.bgKey)||'plains';
+        drawBackground(battleCtx,bgKey,0);
+        const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
+        const gY=Math.round(LOGI_H*0.76)-32;
+        drawOrin(battleCtx,42,gY,getHeroClass('orin',oLvl),0);
+        drawWife(battleCtx,80,gY+2,getHeroClass('wife',wLvl),0);
+        if(state.battle&&state.battle.monsterId!==undefined){
+          const m=MONSTERS[state.battle.monsterId];
+          if(m){
+            const sc=m.tier==='megaboss'?1.5:m.tier==='miniboss'?1.2:1.0;
+            const mx=Math.min(225,Math.round(LOGI_W-16*sc-16));
+            drawMonster(battleCtx,mx,gY-Math.round(8*sc),m,0);
+          }
+        }
+      }
+    },30);
   }
 }
 
 function renderAll(){
   updateXPDisplay();
   renderQuestList();
-  if(document.getElementById('sc-hero').classList.contains('active')) renderBattle();
-  if(document.getElementById('sc-calendar').classList.contains('active')) renderCal();
+  const heroScr=document.getElementById('sc-hero');
+  if(heroScr&&heroScr.classList.contains('active')) renderBattle();
+  if(document.getElementById('sc-calendar')&&document.getElementById('sc-calendar').classList.contains('active')) renderCal();
 }
 
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
