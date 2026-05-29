@@ -807,11 +807,11 @@ function drawBackground(ctx,bgKey,dt){
   const W=LOGI_W,H=LOGI_H;
 
   // Sky gradient
-  const grad=ctx.createLinearGradient(0,0,0,H*0.72);
+  const grad=ctx.createLinearGradient(0,0,0,H*0.75);
   grad.addColorStop(0,pal.skyTop);
   grad.addColorStop(1,pal.skyBot);
   ctx.fillStyle=grad;
-  ctx.fillRect(0,0,W,Math.round(H*0.72));
+  ctx.fillRect(0,0,W,Math.round(H*0.75));
 
   // Stars for dark scenes
   if(['void','heaven','castle','dungeon'].includes(bgKey)){
@@ -875,7 +875,7 @@ function drawBackground(ctx,bgKey,dt){
   }
 
   // Ground
-  const gY=Math.round(H*0.72);
+  const gY=Math.round(H*0.75);
   const gGrad=ctx.createLinearGradient(0,gY,0,H);
   gGrad.addColorStop(0,pal.groundTop);
   gGrad.addColorStop(1,pal.groundBot);
@@ -1140,7 +1140,7 @@ function drawMonster(ctx,cx,cy,monster,frame,S=2){
   r(2,30+bobY,8,3,AC);
 
   // Boss weapon (mini+)
-  if(!monster.tier==='regular'||isMini||isMega){
+  if(isMini||isMega){
     r(13,3+bobY,3,20,W);
     r(10,2+bobY,8,3,W);
   }
@@ -1208,12 +1208,13 @@ function drawFrame(dt){
   const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
   const oCls=getHeroClass('orin',oLvl),wCls=getHeroClass('wife',wLvl);
 
-  // Fixed logical positions - heroes left, boss right, all in clear mid-upper area
-  drawOrin(ctx,44,55,oCls,_heroAnim.orin.frame);
-  drawWife(ctx,80,60,wCls,_heroAnim.wife.frame);
-  if(state.battle&&state.battle.monsterId!==undefined){
-    const m=MONSTERS[state.battle.monsterId];
-    if(m) drawMonster(ctx,238,45,m,_bossAnim.frame);
+  // Sprites stand on ground (gY = LOGI_H*0.75 = 180, sprite feet at cy+30)
+  const gndY = Math.round(LOGI_H * 0.75) - 30;
+  drawOrin(ctx, 45, gndY, oCls, _heroAnim.orin.frame);
+  drawWife(ctx, 88, gndY + 3, wCls, _heroAnim.wife.frame);
+  if(state.battle && state.battle.monsterId !== undefined){
+    const m = MONSTERS[state.battle.monsterId];
+    if(m) drawMonster(ctx, 242, gndY - 10, m, _bossAnim.frame);
   }
 
   if(_shakeTimer>0){
