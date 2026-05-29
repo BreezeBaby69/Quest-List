@@ -764,7 +764,7 @@ function closeLvlModal(){document.getElementById('lvl-modal').classList.remove('
 // ============================================================
 // CANVAS BATTLE ENGINE
 // ============================================================
-const LOGI_W=320, LOGI_H=400;
+const LOGI_W=640, LOGI_H=480;
 let battleCanvas, battleCtx;
 let _battleRAF=null, _lastFrameTime=0;
 let _heroAnim={orin:{frame:0,timer:0},wife:{frame:0,timer:0}};
@@ -832,7 +832,7 @@ function drawBackground(ctx,bgKey,dt){
     ctx.fillStyle='#ffffff';
     for(let i=0;i<28;i++){
       const sx=((i*53+Math.floor(_bgScrollX/5))%W);
-      const sy=(i*31+i*7)%75;
+      const sy=(i*31+i*7)%150;
       ctx.fillRect(sx,sy,i%4===0?2:1,i%4===0?2:1);
     }
   }
@@ -842,7 +842,7 @@ function drawBackground(ctx,bgKey,dt){
     for(let i=0;i<4;i++){
       const gx=((i*85+Math.floor(_bgScrollX/3))%W);
       ctx.fillStyle=`rgba(255,${50+i*20},0,0.14)`;
-      ctx.beginPath();ctx.arc(gx,185,10+i*4,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(gx,370,20+i*8,0,Math.PI*2);ctx.fill();
     }
   }
 
@@ -856,7 +856,7 @@ function drawBackground(ctx,bgKey,dt){
   const mgX=Math.floor(_bgScrollX/2);
   if(bgKey==='plains'){
     for(let i=0;i<5;i++){
-      const tx=((i*76+mgX)%(W+40))-20;
+      const tx=((i*152+mgX)%(W+80))-40;
       ctx.fillStyle='#3d2010';ctx.fillRect(tx+8,Math.round(H*0.72),5,Math.round(H*0.14));
       ctx.fillStyle='#1a4a1a';ctx.fillRect(tx,Math.round(H*0.60),22,Math.round(H*0.15));
       ctx.fillStyle='#2a6a2a';ctx.fillRect(tx+4,Math.round(H*0.54),14,Math.round(H*0.10));
@@ -864,7 +864,7 @@ function drawBackground(ctx,bgKey,dt){
   } else if(bgKey==='dungeon'){
     const now=Date.now();
     for(let i=0;i<5;i++){
-      const tx=((i*65+mgX)%(W+20))-10;
+      const tx=((i*130+mgX)%(W+40))-20;
       const ty=Math.round(H*0.6);
       ctx.fillStyle='#6a4020';ctx.fillRect(tx,ty,4,14);
       ctx.fillStyle=Math.sin(now/180+i)>0?'#ff8800':'#ffaa00';
@@ -873,7 +873,7 @@ function drawBackground(ctx,bgKey,dt){
     }
   } else if(bgKey==='castle'){
     for(let i=0;i<6;i++){
-      const tx=((i*56+mgX)%(W+20))-10;
+      const tx=((i*112+mgX)%(W+40))-20;
       const ty=Math.round(H*0.5);
       ctx.fillStyle='#201830';ctx.fillRect(tx,ty,10,Math.round(H*0.2));
       ctx.fillStyle='#160c22';ctx.fillRect(tx-2,ty-8,14,12);
@@ -881,7 +881,7 @@ function drawBackground(ctx,bgKey,dt){
     }
   } else if(bgKey==='volcano'){
     for(let i=0;i<3;i++){
-      const tx=((i*110+mgX)%(W+50))-25;
+      const tx=((i*220+mgX)%(W+100))-50;
       const ty=Math.round(H*0.52);
       ctx.fillStyle='#2a0800';ctx.fillRect(tx,ty,32,Math.round(H*0.3));
       ctx.fillStyle='#180400';ctx.fillRect(tx+6,ty-8,20,16);
@@ -898,14 +898,14 @@ function drawBackground(ctx,bgKey,dt){
 
   // Ground edge
   ctx.fillStyle=pal.accent;
-  ctx.fillRect(0,gY,W,2);
+  ctx.fillRect(0,gY,W,4);
 
   // Scrolling ground tiles (foreground, parallax ×1.6)
   const fgX=Math.floor(_bgScrollX*1.6);
   ctx.fillStyle=pal.accent;
   for(let i=0;i<9;i++){
-    const tx=((i*40+fgX)%(W+40))-20;
-    ctx.fillRect(tx,gY+2,20,2);
+    const tx=((i*80+fgX)%(W+80))-40;
+    ctx.fillRect(tx,gY+4,40,4);
   }
 }
 
@@ -1228,20 +1228,21 @@ function drawFrame(dt){
   const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
   const oCls=getHeroClass('orin',oLvl),wCls=getHeroClass('wife',wLvl);
 
-  // Ground Y at 75% of logical height
-  const gndY = Math.round(LOGI_H * 0.75) - 32;
-  // Heroes left side
-  drawOrin(ctx, 42, gndY, oCls, _heroAnim.orin.frame);
-  drawWife(ctx, 80, gndY + 2, wCls, _heroAnim.wife.frame);
-  // Monster right side — cap x so it stays in frame even when scaled up
+  // Ground at 76% of canvas height
+  // With LOGI_H=480 and S=2, sprite logical coords are in 0-240 space
+  // Divide by 2 to get sprite space from canvas space
+  const gndY = Math.round(LOGI_H * 0.76); // canvas pixels
+  const heroFeetY = Math.round(gndY/2) - 32; // sprite logical space
+  drawOrin(ctx, 38, heroFeetY, oCls, _heroAnim.orin.frame);
+  drawWife(ctx, 78, heroFeetY + 2, wCls, _heroAnim.wife.frame);
+  // Monster right side
   if(state.battle && state.battle.monsterId !== undefined){
     const m = MONSTERS[state.battle.monsterId];
     if(m){
-      const isMega=m.tier==='megaboss', isMini=m.tier==='miniboss';
-      const sc=isMega?1.5:isMini?1.2:1.0;
-      // Keep monster within canvas: rightmost pixel = (mx + 14*sc)*2 < LOGI_W*2
-      const mx = Math.min(225, Math.round(LOGI_W - 16*sc - 16));
-      drawMonster(ctx, mx, gndY - Math.round(8*sc), m, _bossAnim.frame);
+      const sc=m.tier==='megaboss'?1.5:m.tier==='miniboss'?1.2:1.0;
+      const monsterFeetY = Math.round(gndY/2) - Math.round(32*sc);
+      const mx = Math.min(Math.round(LOGI_W/2)-10, Math.round(LOGI_W/2) - Math.round(18*sc) - 4);
+      drawMonster(ctx, mx, monsterFeetY, m, _bossAnim.frame);
     }
   }
 
@@ -1841,15 +1842,16 @@ function showScreen(name){
         const bgKey=(state.battle&&state.battle.bgKey)||'plains';
         drawBackground(battleCtx,bgKey,0);
         const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
-        const gY=Math.round(LOGI_H*0.76)-32;
-        drawOrin(battleCtx,42,gY,getHeroClass('orin',oLvl),0);
-        drawWife(battleCtx,80,gY+2,getHeroClass('wife',wLvl),0);
+        const gY=Math.round(LOGI_H*0.76);
+        const heroY=Math.round(gY/2)-32;
+        drawOrin(battleCtx,38,heroY,getHeroClass('orin',oLvl),0);
+        drawWife(battleCtx,78,heroY+2,getHeroClass('wife',wLvl),0);
         if(state.battle&&state.battle.monsterId!==undefined){
           const m=MONSTERS[state.battle.monsterId];
           if(m){
             const sc=m.tier==='megaboss'?1.5:m.tier==='miniboss'?1.2:1.0;
-            const mx=Math.min(225,Math.round(LOGI_W-16*sc-16));
-            drawMonster(battleCtx,mx,gY-Math.round(8*sc),m,0);
+            const mx=Math.min(Math.round(LOGI_W/2)-10, Math.round(LOGI_W/2)-Math.round(18*sc)-4);
+            drawMonster(battleCtx,mx,Math.round(gY/2)-Math.round(32*sc),m,0);
           }
         }
       }
