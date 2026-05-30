@@ -1365,24 +1365,30 @@ function drawMonster(ctx,cx,cy,monster,frame,S=2){
 // ============================================================
 function startBattleLoop(){
   if(_battleRAF) cancelAnimationFrame(_battleRAF);
+  initCanvas();
+  resizeCanvas();
   _lastFrameTime=performance.now();
-  // Pre-init canvas now in case hero tab is already active
-  setTimeout(initCanvas, 50);
-  function loop(now){
-    _battleRAF=requestAnimationFrame(loop);
-    const dt=Math.min((now-_lastFrameTime)/1000,0.1);
-    _lastFrameTime=now;
-    const heroScr=document.getElementById('sc-hero');
-    if(!heroScr||!heroScr.classList.contains('active')) return;
-    if(!battleCtx||!battleCanvas||battleCanvas.width===0){
-      initCanvas();
-      return;
+
+  // Load + preprocess sprite sheets, then start the render loop
+  loadSprites(()=>{
+    preprocessAllSprites();
+    console.log('All sprites loaded and processed');
+    function loop(now){
+      _battleRAF=requestAnimationFrame(loop);
+      if(!battleCtx||!battleCanvas) return;
+      const dt=Math.min((now-_lastFrameTime)/1000,0.1);
+      _lastFrameTime=now;
+      tickSpriteAnims(dt);
+      tickAnims(dt);
+      const heroScr=document.getElementById('sc-hero');
+      if(heroScr&&heroScr.classList.contains('active')){
+        if(!battleCanvas.width||battleCanvas.width===0) resizeCanvas();
+        drawFrame(dt);
+      }
+      processQueue();
     }
-    tickAnims(dt);
-    drawFrame(dt);
-    processQueue();
-  }
-  _battleRAF=requestAnimationFrame(loop);
+    _battleRAF=requestAnimationFrame(loop);
+  });
 }
 
 function tickAnims(dt){
