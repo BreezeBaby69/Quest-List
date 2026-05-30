@@ -798,7 +798,7 @@ function loadSprites(onReady) {
 // We pre-process each sheet to remove the BG color
 const SPRITE_CANVASES = {};
 
-function preprocessSprite(name, bgRGB, tolerance=40) {
+function preprocessSprite(name, bgRGB, tolerance=50) {
   const img = SPRITES[name];
   if(!img) return;
   const oc = document.createElement('canvas');
@@ -807,15 +807,22 @@ function preprocessSprite(name, bgRGB, tolerance=40) {
   ctx.drawImage(img, 0, 0);
   const idata = ctx.getImageData(0,0,img.width,img.height);
   const d = idata.data;
+  // Sample actual bg color from corner pixel for more accuracy
+  const actualBg = [d[0], d[1], d[2]];
   for(let i=0;i<d.length;i+=4) {
-    if(Math.abs(d[i]-bgRGB[0])<tolerance &&
-       Math.abs(d[i+1]-bgRGB[1])<tolerance &&
-       Math.abs(d[i+2]-bgRGB[2])<tolerance) {
-      d[i+3]=0; // make transparent
-    }
+    const r=d[i],g=d[i+1],b=d[i+2];
+    // Match against both provided bgRGB and sampled corner color
+    const matchProvided = Math.abs(r-bgRGB[0])<tolerance &&
+                          Math.abs(g-bgRGB[1])<tolerance &&
+                          Math.abs(b-bgRGB[2])<tolerance;
+    const matchActual   = Math.abs(r-actualBg[0])<tolerance &&
+                          Math.abs(g-actualBg[1])<tolerance &&
+                          Math.abs(b-actualBg[2])<tolerance;
+    if(matchProvided || matchActual) d[i+3]=0;
   }
   ctx.putImageData(idata,0,0);
   SPRITE_CANVASES[name] = oc;
+  console.log(`Sprite ${name} processed: ${img.width}x${img.height}, bg sampled=${actualBg}`);
 }
 
 function preprocessAllSprites() {
@@ -1400,24 +1407,35 @@ function drawFrame(dt){
   const bgKey=(state.battle&&state.battle.bgKey)||'plains';
   drawBackground(ctx,bgKey,dt);
 
-  const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
-  const oCls=getHeroClass('orin',oLvl),wCls=getHeroClass('wife',wLvl);
+  const gndY = Math.round(LOGI_H * 0.76);
+  const heroScale = LOGI_H / 280;
+  const monScale  = LOGI_H / 220;
 
-  // Ground at 76% of canvas height
-  // With LOGI_H=480 and S=2, sprite logical coords are in 0-240 space
-  // Divide by 2 to get sprite space from canvas space
-  const gndY = Math.round(LOGI_H * 0.76); // canvas pixels
-  const heroFeetY = Math.round(gndY/2) - 32; // sprite logical space
-  drawOrin(ctx, 38, heroFeetY, oCls, _heroAnim.orin.frame);
-  drawWife(ctx, 78, heroFeetY + 2, wCls, _heroAnim.wife.frame);
-  // Monster right side
+  // Draw heroes using sprite sheets
+  if(SPRITE_CANVASES.wyvern && SPRITE_CANVASES.eirika){
+    drawSpriteActor(ctx,'orin', Math.round(LOGI_W*0.16), gndY, heroScale, heroScale);
+    drawSpriteActor(ctx,'wife', Math.round(LOGI_W*0.30), gndY, heroScale, heroScale);
+  } else {
+    // Fallback to pixel art while sprites load
+    const oLvl=getLevel(state.xp.orin),wLvl=getLevel(state.xp.wife);
+    const heroFeetY=Math.round(gndY/2)-32;
+    drawOrin(ctx,38,heroFeetY,getHeroClass('orin',oLvl),0);
+    drawWife(ctx,78,heroFeetY+2,getHeroClass('wife',wLvl),0);
+  }
+
+  // Draw monster using sprite sheet
   if(state.battle && state.battle.monsterId !== undefined){
     const m = MONSTERS[state.battle.monsterId];
     if(m){
-      const sc=m.tier==='megaboss'?1.5:m.tier==='miniboss'?1.2:1.0;
-      const monsterFeetY = Math.round(gndY/2) - Math.round(32*sc);
-      const mx = Math.min(Math.round(LOGI_W/2)-10, Math.round(LOGI_W/2) - Math.round(18*sc) - 4);
-      drawMonster(ctx, mx, monsterFeetY, m, _bossAnim.frame);
+      const msc=(m.tier==='megaboss'?1.3:m.tier==='miniboss'?1.1:0.9)*monScale;
+      if(SPRITE_CANVASES.gargoyle){
+        drawSpriteActor(ctx,'monster', Math.round(LOGI_W*0.78), gndY, -msc, msc);
+      } else {
+        const sc=m.tier==='megaboss'?1.5:m.tier==='miniboss'?1.2:1.0;
+        const monsterFeetY=Math.round(gndY/2)-Math.round(32*sc);
+        const mx=Math.min(Math.round(LOGI_W/2)-10,Math.round(LOGI_W/2)-Math.round(18*sc)-4);
+        drawMonster(ctx,mx,monsterFeetY,m,_bossAnim.frame);
+      }
     }
   }
 
